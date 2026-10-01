@@ -93,7 +93,7 @@ export function TodayView({
               &ldquo;{DEFAULT_MOTIVATIONS[motivationIndex].text}&rdquo;
             </p>
             <p className="text-xs text-stone-400 dark:text-stone-500 font-medium">
-              — {DEFAULT_MOTIVATIONS[motivationIndex].author}
+              - {DEFAULT_MOTIVATIONS[motivationIndex].author}
             </p>
           </div>
           <button
@@ -322,7 +322,7 @@ export function TodayView({
             The 10-Pages-a-Day Principle
           </span>
           <p className="text-xs text-stone-500 max-w-md">
-            Reading just 10 pages every day adds up to 3,650 pages a year — equivalent to finishing 12 complete books.
+            Reading just 10 pages every day adds up to 3,650 pages a year, equivalent to finishing 12 complete books.
           </p>
         </div>
 

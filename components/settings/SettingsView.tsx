@@ -436,7 +436,7 @@ export function SettingsView({ settings, onUpdateSettings, onResetApp }: Setting
                 >
                   {geminiModels.map(m => (
                     <option key={m} value={m}>
-                      {m} {m === 'gemini-3.8-flash' ? '(Balanced — Default)' : m === 'gemini-3.1-flash-lite' ? '(High Speed)' : ''}
+                      {m} {m === 'gemini-3.8-flash' ? '(Balanced, Default)' : m === 'gemini-3.1-flash-lite' ? '(High Speed)' : ''}
                     </option>
                   ))}
                 </select>

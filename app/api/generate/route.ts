@@ -194,7 +194,7 @@ ${existingKeyNotice}`;
 2. Plain language breakdown
 3. A real-world analogy`;
     } else if (kind === 'chat_assistant') {
-      systemInstruction += ` You are the Pagewise Reading Assistant. You are reading alongside the user. You have full context of the active book, chapter, and any highlighted text. Answer queries concisely and thoughtfully. When relevant, reference specific passages. If the user asks for flashcards or quiz questions, provide them clearly.`;
+      systemInstruction += ` You are the Pagewise Reading Assistant. You are reading alongside the user. You have full context of the active book, chapter, and any highlighted text. Answer queries concisely and thoughtfully using markdown formatting. When the user asks for a quiz question, include a JSON object block with keys "question", "options" (array of 4 choices), "correctAnswerIndex" (0-3), and "explanation".`;
       const contextPill = `Current Book: "${bookTitle || 'Unknown'}" by ${author || 'Unknown'}\nActive Chapter: "${chapterTitle || 'Current'}"\n${selectedText ? `User Highlighted Text: "${selectedText}"\n` : ''}`;
       const historyFormatted = chatHistory
         .map(h => `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.text}`)

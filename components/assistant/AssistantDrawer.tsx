@@ -18,6 +18,69 @@ import { Book, Chapter, AppSettings, FlashCard } from '@/lib/db/types';
 import { saveCards } from '@/lib/db';
 import { createInitialFsrsState } from '@/lib/study/fsrs';
 import { generateFingerprint } from '@/lib/study/dedupe';
+import ReactMarkdown from 'react-markdown';
+
+function ChatQuizWidget({ quiz }: { quiz: { question: string; options: string[]; correctAnswerIndex: number; explanation: string } }) {
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  return (
+    <div className="max-w-[85%] p-4 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl text-xs space-y-3 shadow-xs my-2">
+      <div className="font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+        <HelpCircle className="w-4 h-4 text-emerald-600" />
+        <span>Interactive Quiz Check</span>
+      </div>
+      <p className="font-medium text-stone-800 dark:text-stone-200">
+        {quiz.question}
+      </p>
+      <div className="space-y-1.5 pt-1">
+        {quiz.options.map((opt, optIdx) => {
+          let btnStyle = 'bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-800 dark:text-stone-200';
+          if (isSubmitted) {
+            if (optIdx === quiz.correctAnswerIndex) {
+              btnStyle = 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 font-semibold';
+            } else if (selectedOption === optIdx) {
+              btnStyle = 'bg-red-50 dark:bg-red-950/60 border-red-300 dark:border-red-800 text-red-900 dark:text-red-200';
+            }
+          } else if (selectedOption === optIdx) {
+            btnStyle = 'bg-stone-900 text-stone-50 dark:bg-stone-100 dark:text-stone-950';
+          }
+
+          return (
+            <button
+              key={optIdx}
+              onClick={() => {
+                if (!isSubmitted) setSelectedOption(optIdx);
+              }}
+              className={`w-full text-left p-2.5 rounded-lg border text-xs transition-colors flex items-center justify-between cursor-pointer ${btnStyle}`}
+            >
+              <span>{opt}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {!isSubmitted ? (
+        <button
+          onClick={() => {
+            if (selectedOption !== null) setIsSubmitted(true);
+          }}
+          disabled={selectedOption === null}
+          className="w-full py-2 bg-stone-900 text-stone-50 dark:bg-stone-100 dark:text-stone-900 rounded-lg text-xs font-semibold disabled:opacity-40 cursor-pointer"
+        >
+          Submit Answer
+        </button>
+      ) : (
+        <div className="p-3 bg-stone-50 dark:bg-stone-950 rounded-lg border border-stone-200 dark:border-stone-800 space-y-1 text-[11px] text-stone-600 dark:text-stone-400">
+          <p className="font-semibold text-stone-900 dark:text-stone-100">
+            {selectedOption === quiz.correctAnswerIndex ? 'Correct! Excellent recall.' : 'Incorrect.'}
+          </p>
+          <p>{quiz.explanation}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface AssistantDrawerProps {
   isOpen: boolean;
@@ -39,6 +102,12 @@ interface ChatMessage {
     front: string;
     back: string;
     conceptKey: string;
+  };
+  generatedQuiz?: {
+    question: string;
+    options: string[];
+    correctAnswerIndex: number;
+    explanation: string;
   };
   cardAdded?: boolean;
 }
@@ -118,12 +187,31 @@ export function AssistantDrawer({
         };
       }
 
+      let quizMatch: any = undefined;
+      let cleanText = modelReply;
+      try {
+        const jsonMatch = modelReply.match(/\{[\s\S]*?"question"[\s\S]*?"options"[\s\S]*?\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (parsed.question && Array.isArray(parsed.options) && typeof parsed.correctAnswerIndex === 'number') {
+            quizMatch = parsed;
+            cleanText = modelReply.replace(jsonMatch[0], '').trim();
+            if (!cleanText) {
+              cleanText = "Here is a quick quiz to test your recall:";
+            }
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+
       const aiMsg: ChatMessage = {
         id: `msg_${Date.now()}_m`,
         role: 'model',
-        text: modelReply,
+        text: cleanText,
         timestamp: Date.now(),
         generatedCard: cardMatch,
+        generatedQuiz: quizMatch,
       };
 
       setMessages(prev => [...prev, aiMsg]);
@@ -340,11 +428,20 @@ export function AssistantDrawer({
                     className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs md:text-sm leading-relaxed ${
                       isUser
                         ? 'bg-stone-900 text-stone-50 dark:bg-stone-100 dark:text-stone-950 font-normal rounded-tr-xs'
-                        : 'bg-stone-100 dark:bg-stone-800 text-stone-800 dark:text-stone-200 rounded-tl-xs whitespace-pre-line'
+                        : 'bg-stone-100 dark:bg-stone-800 text-stone-800 dark:text-stone-200 rounded-tl-xs'
                     }`}
                   >
-                    {m.text}
+                    {isUser ? (
+                      m.text
+                    ) : (
+                      <div className="prose prose-stone dark:prose-invert text-xs md:text-sm max-w-none">
+                        <ReactMarkdown>{m.text}</ReactMarkdown>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Render Interactive Quiz Widget GUI if detected */}
+                  {!isUser && m.generatedQuiz && <ChatQuizWidget quiz={m.generatedQuiz} />}
 
                   {/* Render 1-click Add Card UI if Assistant generated a flashcard */}
                   {!isUser && m.generatedCard && (

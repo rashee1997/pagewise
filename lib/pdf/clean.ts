@@ -1,5 +1,5 @@
 /**
- * Robust Text Cleaning Utility for PDF Extraction:
+ * Text Cleaning Utility for PDF Extraction:
  * - Joins hyphenated words across line breaks (e.g. "com-\npound" -> "compound")
  * - Removes isolated running page headers/footers
  * - Normalizes excessive whitespace while preserving true paragraphs
