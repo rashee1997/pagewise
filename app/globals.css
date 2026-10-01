@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
+/* `.force-light` opts a subtree out of dark mode (e.g. the sepia reader theme) */
+@custom-variant dark (&:where(.dark, .dark *):not(:where(.force-light, .force-light *)));
 
 @layer base {
   ::selection {
@@ -21,3 +22,55 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ---- Accessibility foundations ---- */
+:root {
+  --focus: #1d4ed8;
+  --header-h: 4.5rem;
+}
+.dark {
+  --focus: #93c5fd;
+}
+
+/* Visible keyboard focus on every interactive control (WCAG 2.4.7) */
+:where(a, button, [role='button'], [role='tab'], [role='option'], input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Keep focused elements clear of sticky header/footer (WCAG 2.4.11) */
+html {
+  scroll-padding-top: var(--header-h);
+  scroll-padding-bottom: var(--header-h);
+}
+
+/* Respect reduced-motion preferences (animations, transitions, smooth scroll) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Reader themes drive chrome via data attribute so header/footer match the page */
+.reader-chrome {
+  background-color: color-mix(in srgb, var(--reader-bg, #fff) 92%, transparent);
+  color: var(--reader-fg, inherit);
+  border-color: color-mix(in srgb, var(--reader-fg, #1c1917) 14%, transparent);
+}
+
+/* Programmatic focus targets (dialog panels, headings) should not show a ring */
+[tabindex='-1']:focus-visible {
+  outline: none;
+}
+
+.reader-paper { --reader-bg: #fbf9f5; --reader-fg: #1c1917; }
+.reader-clean { --reader-bg: #ffffff; --reader-fg: #1c1917; }
+.dark .reader-paper,
+.dark .reader-clean { --reader-bg: #0c0a09; --reader-fg: #f5f5f4; }
+.reader-sepia { --reader-bg: #f4ecd8; --reader-fg: #43302b; }
+.reader-dark { --reader-bg: #141413; --reader-fg: #e7e5e4; }

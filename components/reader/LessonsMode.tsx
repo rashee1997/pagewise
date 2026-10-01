@@ -139,7 +139,7 @@ export function LessonsMode({ book, chapter, settings }: LessonsModeProps) {
           <h2 className="text-xl md:text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
             Chapter Lessons & Takeaways
           </h2>
-          <p className="text-xs text-stone-500">
+          <p className="text-xs text-stone-600 dark:text-stone-400">
             {chapter.title} · Extracted via AI or added manually
           </p>
         </div>
@@ -198,14 +198,14 @@ export function LessonsMode({ book, chapter, settings }: LessonsModeProps) {
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0">
                     {idx + 1}
                   </div>
                   <div>
                     <h3 className="text-base md:text-lg font-bold text-stone-900 dark:text-stone-100">
                       {lesson.title}
                     </h3>
-                    <span className="text-[10px] uppercase tracking-wider font-semibold text-stone-400">
+                    <span className="text-xs uppercase tracking-wider font-semibold text-stone-600 dark:text-stone-400">
                       {lesson.isManual ? 'Manual Entry' : 'AI Extracted'}
                     </span>
                   </div>
@@ -213,7 +213,7 @@ export function LessonsMode({ book, chapter, settings }: LessonsModeProps) {
 
                 <button
                   onClick={() => handleDeleteLesson(idx)}
-                  className="p-1.5 text-stone-400 hover:text-red-500 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+                  className="p-1.5 text-stone-600 dark:text-stone-400 hover:text-red-500 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
                   title="Delete lesson"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -234,7 +234,7 @@ export function LessonsMode({ book, chapter, settings }: LessonsModeProps) {
 
               {lesson.actionableStep && (
                 <div className="flex items-start gap-2 text-xs text-emerald-900 dark:text-emerald-300 bg-emerald-50/80 dark:bg-emerald-950/40 p-3 rounded-xl border border-emerald-200 dark:border-emerald-900">
-                  <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-700 dark:text-emerald-400" />
                   <div>
                     <span className="font-semibold block mb-0.5">Actionable Takeaway:</span>
                     <span>{lesson.actionableStep}</span>
@@ -249,12 +249,12 @@ export function LessonsMode({ book, chapter, settings }: LessonsModeProps) {
       {/* Empty State */}
       {!isLoading && (!lessons || lessons.length === 0) && !error && (
         <div className="py-16 text-center space-y-4 bg-stone-50 dark:bg-stone-900/50 rounded-2xl border border-dashed border-stone-200 dark:border-stone-800 p-8">
-          <Compass className="w-8 h-8 text-stone-400 mx-auto" />
+          <Compass className="w-8 h-8 text-stone-600 dark:text-stone-400 mx-auto" />
           <div className="space-y-1">
             <h3 className="text-base font-semibold text-stone-800 dark:text-stone-200">
               No lessons recorded for this chapter yet
             </h3>
-            <p className="text-xs text-stone-500 max-w-sm mx-auto">
+            <p className="text-xs text-stone-600 dark:text-stone-400 max-w-sm mx-auto">
               Extract structured takeaways automatically with AI or add your own manual observations.
             </p>
           </div>
@@ -288,7 +288,7 @@ export function LessonsMode({ book, chapter, settings }: LessonsModeProps) {
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded-lg text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
+                className="p-1 rounded-lg text-stone-600 dark:text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
               >
                 <X className="w-5 h-5" />
               </button>

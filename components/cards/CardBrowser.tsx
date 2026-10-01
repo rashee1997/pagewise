@@ -1,5 +1,6 @@
 'use client';
 
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import React, { useState } from 'react';
 import { FlashCard, Book } from '@/lib/db/types';
 import { deleteCard, saveCards } from '@/lib/db';
@@ -34,11 +35,16 @@ export function CardBrowser({ cards, books, onRefreshCards }: CardBrowserProps) 
     return matchesBook && matchesSearch;
   });
 
-  const handleDelete = async (cardId: string) => {
-    if (confirm('Delete this card from your deck?')) {
-      await deleteCard(cardId);
-      onRefreshCards();
-    }
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  const handleDelete = (cardId: string) => setPendingDeleteId(cardId);
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
+    await deleteCard(id);
+    onRefreshCards();
   };
 
   const handleToggleSuspend = async (card: FlashCard) => {
@@ -82,7 +88,7 @@ export function CardBrowser({ cards, books, onRefreshCards }: CardBrowserProps) 
         <div className="flex items-center gap-2 flex-1">
           {/* Search */}
           <div className="relative flex-1 max-w-sm">
-            <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-stone-600 dark:text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={search}
@@ -126,38 +132,38 @@ export function CardBrowser({ cards, books, onRefreshCards }: CardBrowserProps) 
                 key={card.id}
                 className="p-4 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl shadow-2xs space-y-2 relative group"
               >
-                <div className="flex items-center justify-between text-xs text-stone-500 font-medium">
+                <div className="flex items-center justify-between text-xs text-stone-600 dark:text-stone-400 font-medium">
                   <div className="flex items-center gap-2">
                     <span>{card.chapterTitle || 'Deck Card'}</span>
                     <span aria-hidden="true">·</span>
-                    <span className="text-stone-400">{card.conceptKey}</span>
+                    <span className="text-stone-600 dark:text-stone-400">{card.conceptKey}</span>
                   </div>
 
                   <div className="flex items-center gap-2">
                     {card.suspended ? (
-                      <span className="text-[11px] font-semibold text-stone-400 dark:text-stone-500 bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded-md">
+                      <span className="text-xs font-semibold text-stone-600 dark:text-stone-500 bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded-md">
                         Suspended
                       </span>
                     ) : isDue ? (
-                      <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                      <span className="text-xs font-semibold text-amber-800 dark:text-amber-400">
                         Due Now
                       </span>
                     ) : (
-                      <span className="text-[11px] text-stone-400">
+                      <span className="text-xs text-stone-600 dark:text-stone-400">
                         Scheduled
                       </span>
                     )}
 
                     <button
                       onClick={() => handleToggleSuspend(card)}
-                      className="text-[11px] text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 px-1.5 py-0.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800"
+                      className="text-xs text-stone-600 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 px-1.5 py-0.5 rounded hover:bg-stone-100 dark:hover:bg-stone-800"
                     >
                       {card.suspended ? 'Unsuspend' : 'Suspend'}
                     </button>
 
                     <button
                       onClick={() => handleDelete(card.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-stone-400 hover:text-red-600 transition-opacity"
+                      className="opacity-0 group-hover:opacity-100 p-1 text-stone-600 dark:text-stone-400 hover:text-red-600 transition-opacity"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -176,7 +182,7 @@ export function CardBrowser({ cards, books, onRefreshCards }: CardBrowserProps) 
           })}
         </div>
       ) : (
-        <div className="py-12 text-center text-xs text-stone-500">
+        <div className="py-12 text-center text-xs text-stone-600 dark:text-stone-400">
           No flashcards match your current filter.
         </div>
       )}
@@ -199,7 +205,7 @@ export function CardBrowser({ cards, books, onRefreshCards }: CardBrowserProps) 
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(false)}
-                className="p-1 rounded-md text-stone-400 hover:text-stone-700"
+                className="p-1 rounded-md text-stone-600 dark:text-stone-400 hover:text-stone-700"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -259,7 +265,7 @@ export function CardBrowser({ cards, books, onRefreshCards }: CardBrowserProps) 
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(false)}
-                className="px-4 py-2 text-stone-500 hover:text-stone-800"
+                className="px-4 py-2 text-stone-600 dark:text-stone-400 hover:text-stone-800"
               >
                 Cancel
               </button>
@@ -273,6 +279,14 @@ export function CardBrowser({ cards, books, onRefreshCards }: CardBrowserProps) 
           </form>
         </div>
       )}
+      <ConfirmDialog
+        isOpen={!!pendingDeleteId}
+        title="Delete this card?"
+        description="It will be removed from your deck and its review history will no longer count."
+        confirmLabel="Delete card"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   );
 }

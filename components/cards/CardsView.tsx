@@ -72,7 +72,7 @@ export function CardsView({ books, onOpenBook }: CardsViewProps) {
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
             Spaced Repetition
           </h1>
-          <p className="text-xs md:text-sm text-stone-500">
+          <p className="text-xs md:text-sm text-stone-600 dark:text-stone-400">
             FSRS memory scheduling · Never forget what you read
           </p>
         </div>
@@ -107,7 +107,7 @@ export function CardsView({ books, onOpenBook }: CardsViewProps) {
           {/* Big Action Card: Due Recall */}
           <div className="bg-white dark:bg-stone-900 rounded-3xl border border-stone-200 dark:border-stone-800 p-6 md:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-medium text-stone-500">
+              <div className="flex items-center gap-2 text-xs font-medium text-stone-600 dark:text-stone-400">
                 <Clock className="w-4 h-4 text-amber-500" />
                 <span>Daily Recall Target</span>
               </div>
@@ -132,7 +132,7 @@ export function CardsView({ books, onOpenBook }: CardsViewProps) {
                 <span>Start Review Session</span>
               </button>
             ) : (
-              <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/40 px-4 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-900">
+              <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/40 px-4 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-900">
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Zero Due Cards</span>
               </div>
@@ -160,10 +160,10 @@ export function CardsView({ books, onOpenBook }: CardsViewProps) {
                         <h4 className="font-semibold text-sm md:text-base text-stone-900 dark:text-stone-100 truncate">
                           {b.title}
                         </h4>
-                        <div className="flex items-center gap-2 text-xs text-stone-500">
+                        <div className="flex items-center gap-2 text-xs text-stone-600 dark:text-stone-400">
                           <span>{bookCards.length} total cards</span>
                           <span aria-hidden="true">·</span>
-                          <span className={bookDue.length > 0 ? 'text-amber-600 dark:text-amber-400 font-semibold' : ''}>
+                          <span className={bookDue.length > 0 ? 'text-amber-800 dark:text-amber-400 font-semibold' : ''}>
                             {bookDue.length} due
                           </span>
                         </div>
@@ -191,7 +191,7 @@ export function CardsView({ books, onOpenBook }: CardsViewProps) {
                 })}
               </div>
             ) : (
-              <div className="py-8 text-center text-xs text-stone-500">
+              <div className="py-8 text-center text-xs text-stone-600 dark:text-stone-400">
                 Upload a book to create your first study deck.
               </div>
             )}

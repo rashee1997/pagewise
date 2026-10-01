@@ -88,7 +88,7 @@ export function SummaryMode({ book, chapter, settings }: SummaryModeProps) {
           <h2 className="text-xl md:text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
             Chapter Summary
           </h2>
-          <p className="text-xs text-stone-500">
+          <p className="text-xs text-stone-600 dark:text-stone-400">
             {chapter.title} · {chapter.tokenEstimate} tokens
           </p>
         </div>
@@ -138,7 +138,7 @@ export function SummaryMode({ book, chapter, settings }: SummaryModeProps) {
           {/* Executive Headline */}
           {summary.headline && (
             <div className="p-5 bg-stone-100/80 dark:bg-stone-800/50 rounded-2xl border border-stone-200 dark:border-stone-800">
-              <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider block mb-1">
+              <span className="text-xs font-semibold text-stone-600 dark:text-stone-400 uppercase tracking-wider block mb-1">
                 Core Thesis
               </span>
               <p className="text-lg md:text-xl font-serif font-medium text-stone-900 dark:text-stone-100 leading-snug">
@@ -150,7 +150,7 @@ export function SummaryMode({ book, chapter, settings }: SummaryModeProps) {
           {/* Detailed Overview */}
           {summary.overview && (
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-400">
                 Executive Overview
               </h3>
               <p className="text-sm md:text-base text-stone-800 dark:text-stone-200 leading-relaxed whitespace-pre-line">
@@ -162,7 +162,7 @@ export function SummaryMode({ book, chapter, settings }: SummaryModeProps) {
           {/* Key Takeaways */}
           {summary.takeaways && summary.takeaways.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-400">
                 Key Takeaways
               </h3>
               <div className="grid gap-2.5">
@@ -171,7 +171,7 @@ export function SummaryMode({ book, chapter, settings }: SummaryModeProps) {
                     key={idx}
                     className="p-3.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl flex items-start gap-3 shadow-2xs"
                   >
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
                     <p className="text-sm text-stone-800 dark:text-stone-200">{point}</p>
                   </div>
                 ))}
@@ -182,7 +182,7 @@ export function SummaryMode({ book, chapter, settings }: SummaryModeProps) {
           {/* Section Outline */}
           {summary.outline && summary.outline.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 flex items-center gap-2">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-400 flex items-center gap-2">
                 <ListOrdered className="w-4 h-4" />
                 <span>Chapter Progression</span>
               </h3>
@@ -206,11 +206,11 @@ export function SummaryMode({ book, chapter, settings }: SummaryModeProps) {
       {/* Empty State before Generation */}
       {!isLoading && !summary && !error && (
         <div className="py-16 text-center space-y-3 bg-stone-50 dark:bg-stone-900/50 rounded-2xl border border-dashed border-stone-200 dark:border-stone-800 p-8">
-          <BookOpen className="w-8 h-8 text-stone-400 mx-auto" />
+          <BookOpen className="w-8 h-8 text-stone-600 dark:text-stone-400 mx-auto" />
           <h3 className="text-base font-semibold text-stone-800 dark:text-stone-200">
             No summary generated for this chapter yet
           </h3>
-          <p className="text-xs text-stone-500 max-w-sm mx-auto">
+          <p className="text-xs text-stone-600 dark:text-stone-400 max-w-sm mx-auto">
             Click the button above to distill this chapter into key takeaways, outline, and core thesis.
           </p>
         </div>

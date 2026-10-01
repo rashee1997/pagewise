@@ -87,7 +87,7 @@ export function GlossaryMode({ book, chapter, settings }: GlossaryModeProps) {
           <h2 className="text-xl md:text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
             Terminology & Glossary
           </h2>
-          <p className="text-xs text-stone-500">
+          <p className="text-xs text-stone-600 dark:text-stone-400">
             Vocabulary and specialized concepts for {chapter.title}
           </p>
         </div>
@@ -140,7 +140,7 @@ export function GlossaryMode({ book, chapter, settings }: GlossaryModeProps) {
                 {item.definition}
               </p>
               {item.contextUsage && (
-                <p className="text-[11px] text-stone-500 italic">
+                <p className="text-xs text-stone-600 dark:text-stone-400 italic">
                   Context: &ldquo;{item.contextUsage}&rdquo;
                 </p>
               )}
@@ -151,11 +151,11 @@ export function GlossaryMode({ book, chapter, settings }: GlossaryModeProps) {
 
       {!isLoading && !glossary && !error && (
         <div className="py-16 text-center space-y-3 bg-stone-50 dark:bg-stone-900/50 rounded-2xl border border-dashed border-stone-200 dark:border-stone-800 p-8">
-          <BookMarked className="w-8 h-8 text-stone-400 mx-auto" />
+          <BookMarked className="w-8 h-8 text-stone-600 dark:text-stone-400 mx-auto" />
           <h3 className="text-base font-semibold text-stone-800 dark:text-stone-200">
             No glossary extracted yet
           </h3>
-          <p className="text-xs text-stone-500 max-w-sm mx-auto">
+          <p className="text-xs text-stone-600 dark:text-stone-400 max-w-sm mx-auto">
             Extract domain terms, technical phrases, and archaic vocabulary defined in context.
           </p>
         </div>

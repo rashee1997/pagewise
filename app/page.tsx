@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
+  updateAppSettings,
   getAllBooks,
   getDueCards,
   getAppSettings,
@@ -14,16 +15,37 @@ import { db, DEFAULT_SETTINGS } from '@/lib/db';
 import { Book, Chapter, AppSettings } from '@/lib/db/types';
 
 import { AppNavbar, ActiveTab } from '@/components/navigation/AppNavbar';
-import { CommandPalette } from '@/components/navigation/CommandPalette';
 import { TodayView } from '@/components/today/TodayView';
 import { LibraryView } from '@/components/library/LibraryView';
 import { ReaderView } from '@/components/reader/ReaderView';
 import { CardsView } from '@/components/cards/CardsView';
 import { SettingsView } from '@/components/settings/SettingsView';
 import { UploadModal } from '@/components/library/UploadModal';
-import { motion, AnimatePresence } from 'motion/react';
+import { OnboardingModal } from '@/components/onboarding/OnboardingModal';
+import { ShortcutsDialog } from '@/components/navigation/ShortcutsDialog';
+import { CommandPalette, Command } from '@/components/navigation/CommandPalette';
+import { ToastProvider, useToast } from '@/components/ui/Toast';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { useLocalStorageFlag } from '@/hooks/useLocalStorageFlag';
+import { BookOpen, Layers, Compass, Settings, Moon, Plus, Keyboard } from 'lucide-react';
 
 export default function PagewiseApp() {
+  return (
+    <ToastProvider>
+      <PagewiseShell />
+    </ToastProvider>
+  );
+}
+
+function isTypingTarget(el: EventTarget | null) {
+  const node = el as HTMLElement | null;
+  if (!node || !node.tagName) return false;
+  return node.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(node.tagName);
+}
+
+function PagewiseShell() {
+  const toast = useToast();
+  const reduceMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState<ActiveTab>('today');
   const [books, setBooks] = useState<Book[]>([]);
   const [dueCardsCount, setDueCardsCount] = useState(0);
@@ -39,21 +61,47 @@ export default function PagewiseApp() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [onboarded, setOnboarded] = useLocalStorageFlag('pagewise_onboarded');
+  const [readerCommands, setReaderCommands] = useState<Command[]>([]);
+  const [assistantSeed, setAssistantSeed] = useState<string | null>(null);
 
-  // Sync theme
+  // Sync theme (and mirror to localStorage so the pre-paint script in layout.tsx can read it)
   useEffect(() => {
     const root = document.documentElement;
-    if (settings.theme === 'dark') {
-      root.classList.add('dark');
-    } else if (settings.theme === 'light') {
-      root.classList.remove('dark');
-    } else {
-      // System
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (prefersDark) root.classList.add('dark');
-      else root.classList.remove('dark');
+    try {
+      localStorage.setItem('pagewise_theme', settings.theme);
+    } catch {
+      // storage unavailable
+    }
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => {
+      const dark = settings.theme === 'dark' || (settings.theme === 'system' && mql.matches);
+      root.classList.toggle('dark', dark);
+    };
+    apply();
+    if (settings.theme === 'system') {
+      mql.addEventListener('change', apply);
+      return () => mql.removeEventListener('change', apply);
     }
   }, [settings.theme]);
+
+  // Global shortcuts: Ctrl/⌘+K toggles the command menu, "?" opens shortcut help
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(open => !open);
+        return;
+      }
+      if (e.key === '?' && !e.metaKey && !e.ctrlKey && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        setIsShortcutsOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -111,7 +159,7 @@ export default function PagewiseApp() {
     if (!book) return;
     const chapters = await getChaptersForBook(bookId);
     if (chapters.length === 0) {
-      alert('This book does not have chapters to read.');
+      toast({ message: 'This book has no readable chapters.', tone: 'error' });
       return;
     }
     setActiveBook(book);
@@ -126,14 +174,82 @@ export default function PagewiseApp() {
     await loadData();
   };
 
+  const persistSettings = useCallback(async (partial: Partial<AppSettings>) => {
+    setSettings(prev => ({ ...prev, ...partial }));
+    try {
+      const updated = await updateAppSettings(partial);
+      setSettings(updated);
+    } catch (e) {
+      console.error('Failed to save settings', e);
+    }
+  }, []);
+
   const handleToggleTheme = () => {
-    const nextTheme = settings.theme === 'dark' ? 'light' : 'dark';
-    setSettings(prev => ({ ...prev, theme: nextTheme }));
+    const isDark = document.documentElement.classList.contains('dark');
+    persistSettings({ theme: isDark ? 'light' : 'dark' });
   };
+
+  const navigateTo = (tab: ActiveTab) => {
+    if (activeBookId) {
+      handleBackToLibrary().then(() => setActiveTab(tab));
+    } else {
+      setActiveTab(tab);
+    }
+  };
+
+  const pageMotion = reduceMotion
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.01 } }
+    : {
+        initial: { opacity: 0, y: 8 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 0, y: -8 },
+        transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] },
+      };
+
+  const commands: Command[] = [
+    ...readerCommands,
+    { id: 'nav-today', group: 'Go to', label: 'Today', icon: <Compass className="w-4 h-4" />, run: () => navigateTo('today') },
+    { id: 'nav-library', group: 'Go to', label: 'Library', icon: <BookOpen className="w-4 h-4" />, run: () => navigateTo('library') },
+    { id: 'nav-cards', group: 'Go to', label: 'Flashcards & reviews', icon: <Layers className="w-4 h-4" />, keywords: 'review study', run: () => navigateTo('cards') },
+    { id: 'nav-settings', group: 'Go to', label: 'Settings & AI providers', icon: <Settings className="w-4 h-4" />, keywords: 'api key model', run: () => navigateTo('settings') },
+    { id: 'act-add', group: 'Actions', label: 'Add a book (PDF)', icon: <Plus className="w-4 h-4" />, keywords: 'upload import', run: () => setIsUploadOpen(true) },
+    { id: 'act-theme', group: 'Actions', label: 'Toggle dark / light theme', icon: <Moon className="w-4 h-4" />, run: handleToggleTheme },
+    { id: 'act-keys', group: 'Actions', label: 'Keyboard shortcuts', icon: <Keyboard className="w-4 h-4" />, shortcut: '?', run: () => setIsShortcutsOpen(true) },
+    ...books.map<Command>(b => ({
+      id: `book-${b.id}`,
+      group: 'Books',
+      label: b.title,
+      detail: b.author,
+      icon: <BookOpen className="w-4 h-4" />,
+      keywords: 'open read',
+      run: () => handleOpenBook(b.id),
+    })),
+  ];
+
+  const overlays = (
+    <>
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        commands={commands}
+        onNoResultsAction={
+          activeBookId
+            ? q => setAssistantSeed(q)
+            : undefined
+        }
+      />
+      <ShortcutsDialog isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
+      <OnboardingModal
+        isOpen={!onboarded}
+        onClose={() => setOnboarded(true)}
+        onGetStarted={() => setIsUploadOpen(true)}
+      />
+    </>
+  );
 
   if (!isInitialized) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-stone-950 flex items-center justify-center">
+      <div className="min-h-dvh bg-stone-50 dark:bg-stone-950 flex items-center justify-center">
         <div className="w-8 h-8 rounded-lg bg-stone-900 text-stone-100 dark:bg-stone-100 dark:text-stone-950 flex items-center justify-center font-bold text-sm tracking-tight animate-pulse">
           P
         </div>
@@ -144,20 +260,26 @@ export default function PagewiseApp() {
   // If in Reader view, render fullscreen reader
   if (activeBookId && activeBook && activeChapters.length > 0) {
     return (
+      <>
       <ReaderView
         book={activeBook}
         chapters={activeChapters}
         initialChapterIndex={activeBook.progress.chapterIndex || 0}
         settings={settings}
-        onUpdateSettings={partial => setSettings(prev => ({ ...prev, ...partial }))}
+        onUpdateSettings={persistSettings}
         onBackToLibrary={handleBackToLibrary}
         dueCardsCount={dueCardsCount}
+        onRegisterCommands={setReaderCommands}
+        assistantSeed={assistantSeed}
+        onAssistantSeedConsumed={() => setAssistantSeed(null)}
       />
+      {overlays}
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-stone-950 flex flex-col md:flex-row text-stone-900 dark:text-stone-100">
+    <div className="min-h-dvh bg-stone-50 dark:bg-stone-950 flex flex-col md:flex-row text-stone-900 dark:text-stone-100">
       {/* Desktop Sidebar & Mobile Bottom Navigation */}
       <AppNavbar
         activeTab={activeTab}
@@ -172,10 +294,7 @@ export default function PagewiseApp() {
           {activeTab === 'today' && (
             <motion.div
               key="today"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              {...pageMotion}
             >
               <TodayView
                 books={books}
@@ -185,6 +304,7 @@ export default function PagewiseApp() {
                 onOpenBook={handleOpenBook}
                 onStartReview={() => setActiveTab('cards')}
                 onOpenUpload={() => setIsUploadOpen(true)}
+                onOpenLibrary={() => setActiveTab('library')}
                 onUpdateSettings={s => setSettings(s)}
               />
             </motion.div>
@@ -193,10 +313,7 @@ export default function PagewiseApp() {
           {activeTab === 'library' && (
             <motion.div
               key="library"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              {...pageMotion}
             >
               <LibraryView
                 books={books}
@@ -210,10 +327,7 @@ export default function PagewiseApp() {
           {activeTab === 'cards' && (
             <motion.div
               key="cards"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              {...pageMotion}
             >
               <CardsView
                 books={books}
@@ -225,10 +339,7 @@ export default function PagewiseApp() {
           {activeTab === 'settings' && (
             <motion.div
               key="settings"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              {...pageMotion}
             >
               <SettingsView
                 settings={settings}
@@ -250,15 +361,7 @@ export default function PagewiseApp() {
         }}
       />
 
-      {/* Command Palette (Cmd+K) */}
-      <CommandPalette
-        isOpen={isCommandPaletteOpen}
-        onClose={() => setIsCommandPaletteOpen(false)}
-        books={books}
-        onNavigateTab={tab => setActiveTab(tab)}
-        onSelectBook={handleOpenBook}
-        onToggleTheme={handleToggleTheme}
-      />
+      {overlays}
     </div>
   );
 }

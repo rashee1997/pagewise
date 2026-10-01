@@ -11,6 +11,7 @@ import {
   DailyMotivation,
   AppSettings,
   FsrsState,
+  PdfFile,
 } from './types';
 import { createInitialFsrsState } from '../study/fsrs';
 
@@ -25,6 +26,7 @@ export class PagewiseDatabase extends Dexie {
   readingSessions!: Table<ReadingSession, string>;
   dailyMotivations!: Table<DailyMotivation, string>;
   settings!: Table<AppSettings, string>;
+  pdfFiles!: Table<PdfFile, string>;
 
   constructor() {
     super('pagewise_db');
@@ -39,6 +41,9 @@ export class PagewiseDatabase extends Dexie {
       readingSessions: 'id, bookId, date',
       dailyMotivations: 'date, hash',
       settings: 'id',
+    });
+    this.version(2).stores({
+      pdfFiles: 'bookId',
     });
   }
 }
@@ -99,9 +104,23 @@ export async function saveBook(book: Book): Promise<void> {
   await db.books.put(book);
 }
 
+export async function updateBookProgress(bookId: string, progress: Book['progress']): Promise<void> {
+  await db.books.update(bookId, { progress, lastOpenedAt: Date.now() });
+}
+
+export async function savePdfBlob(bookId: string, blob: Blob): Promise<void> {
+  await db.pdfFiles.put({ bookId, blob });
+  await db.books.update(bookId, { hasPdf: true });
+}
+
+export async function getPdfBlob(bookId: string): Promise<Blob | undefined> {
+  return (await db.pdfFiles.get(bookId))?.blob;
+}
+
 export async function deleteBookCascade(bookId: string): Promise<void> {
-  await db.transaction('rw', [db.books, db.chapters, db.cards, db.generationRecords, db.chapterMaterials, db.notes, db.readingSessions], async () => {
+  await db.transaction('rw', [db.books, db.chapters, db.cards, db.generationRecords, db.chapterMaterials, db.notes, db.readingSessions, db.pdfFiles], async () => {
     await db.books.delete(bookId);
+    await db.pdfFiles.delete(bookId);
     await db.chapters.where('bookId').equals(bookId).delete();
     await db.cards.where('bookId').equals(bookId).delete();
     await db.generationRecords.where('bookId').equals(bookId).delete();
@@ -338,7 +357,9 @@ export async function clearAllDatabase(): Promise<void> {
     db.reviewLogs,
     db.dailyMotivations,
     db.settings,
+    db.pdfFiles,
   ], async () => {
+    await db.pdfFiles.clear();
     await db.books.clear();
     await db.chapters.clear();
     await db.cards.clear();

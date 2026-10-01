@@ -157,7 +157,7 @@ export function QuizMode({ book, chapter, settings }: QuizModeProps) {
           <h2 className="text-xl md:text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
             Interactive Quiz
           </h2>
-          <p className="text-xs text-stone-500">
+          <p className="text-xs text-stone-600 dark:text-stone-400">
             Assess comprehension of {chapter.title}
           </p>
         </div>
@@ -210,7 +210,7 @@ export function QuizMode({ book, chapter, settings }: QuizModeProps) {
               <h3 className="text-base font-bold text-stone-900 dark:text-stone-100">
                 Quiz Complete: {correctCount} of {totalQuestions} correct ({Math.round((correctCount / totalQuestions) * 100)}%)
               </h3>
-              <p className="text-xs text-stone-500">
+              <p className="text-xs text-stone-600 dark:text-stone-400">
                 {correctCount === totalQuestions
                   ? 'Flawless recall! You have mastered this chapter.'
                   : 'Review the detailed explanations below to cement any weak points.'}
@@ -273,7 +273,7 @@ export function QuizMode({ book, chapter, settings }: QuizModeProps) {
                       >
                         <span>{opt}</span>
                         {hasAnswered && optIdx === q.correctAnswerIndex && (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 ml-2" />
+                          <CheckCircle2 className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0 ml-2" />
                         )}
                         {hasAnswered && chosenOption === optIdx && !isCorrect && (
                           <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 ml-2" />
@@ -295,18 +295,18 @@ export function QuizMode({ book, chapter, settings }: QuizModeProps) {
 
                     {!isCorrect && (
                       <div className="pt-2 border-t border-stone-200/60 dark:border-stone-800/60 flex items-center justify-between">
-                        <span className="text-[11px] text-stone-500">
+                        <span className="text-xs text-stone-600 dark:text-stone-400">
                           Reinforce this concept with spaced repetition:
                         </span>
                         {addedCards[qIdx] ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                          <span className="inline-flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400 font-semibold">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>Saved to Deck</span>
                           </span>
                         ) : (
                           <button
                             onClick={() => handleAddAsFlashcard(qIdx, q)}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-stone-900 hover:bg-stone-800 text-stone-50 dark:bg-stone-100 dark:hover:bg-white dark:text-stone-950 text-[11px] font-semibold rounded-lg shadow-2xs transition-all cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-stone-900 hover:bg-stone-800 text-stone-50 dark:bg-stone-100 dark:hover:bg-white dark:text-stone-950 text-xs font-semibold rounded-lg shadow-2xs transition-all cursor-pointer"
                           >
                             <PlusCircle className="w-3 h-3" />
                             <span>Add as Flashcard</span>
@@ -324,11 +324,11 @@ export function QuizMode({ book, chapter, settings }: QuizModeProps) {
 
       {!isLoading && !questions && !error && (
         <div className="py-16 text-center space-y-3 bg-stone-50 dark:bg-stone-900/50 rounded-2xl border border-dashed border-stone-200 dark:border-stone-800 p-8">
-          <HelpCircle className="w-8 h-8 text-stone-400 mx-auto" />
+          <HelpCircle className="w-8 h-8 text-stone-600 dark:text-stone-400 mx-auto" />
           <h3 className="text-base font-semibold text-stone-800 dark:text-stone-200">
             No quiz generated for this chapter yet
           </h3>
-          <p className="text-xs text-stone-500 max-w-sm mx-auto">
+          <p className="text-xs text-stone-600 dark:text-stone-400 max-w-sm mx-auto">
             Test yourself with multiple-choice questions grounded strictly in this chapter’s text.
           </p>
         </div>

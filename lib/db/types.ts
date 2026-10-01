@@ -10,12 +10,15 @@ export interface Book {
   addedAt: number;
   lastOpenedAt: number;
   coverDataUrl?: string;
-  pdfDataUrl?: string; // base64 or object URL fallback
+  pdfDataUrl?: string; // legacy: transient blob URL (no longer persisted)
+  chapterProgress?: Record<string, number>; // chapterId -> furthest read fraction (0-1)
+  hasPdf?: boolean; // original PDF blob stored in the pdfFiles table
   progress: {
     chapterId?: string;
     chapterIndex?: number;
     page: number;
     percent: number;
+    scrollFraction?: number; // 0-1 position inside the current chapter
   };
   status: BookStatus;
   statusMessage?: string;
@@ -137,6 +140,11 @@ export interface Note {
   quote?: string;
   text: string;
   createdAt: number;
+}
+
+export interface PdfFile {
+  bookId: string;
+  blob: Blob;
 }
 
 export interface ReadingSession {

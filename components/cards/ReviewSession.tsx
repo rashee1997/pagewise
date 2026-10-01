@@ -6,6 +6,7 @@ import { calculateNextState, previewNextIntervals } from '@/lib/study/fsrs';
 import { updateCardReview } from '@/lib/db';
 import { X, HelpCircle, Check, Award, ArrowRight, RotateCw, RotateCcw } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { Dialog } from '@/components/ui/Dialog';
 import { FsrsState } from '@/lib/db/types';
 
 interface ReviewSessionProps {
@@ -19,7 +20,8 @@ export function ReviewSession({ cards, onComplete, onExit }: ReviewSessionProps)
   const [showAnswer, setShowAnswer] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [reviewedCount, setReviewedCount] = useState(0);
-  const [history, setHistory] = useState<Array<{ card: FlashCard; prevFsrs: FsrsState }>>([]);
+  const [history, setHistory] = useState<Array<{ card: FlashCard; prevFsrs: FsrsState; rating: 1 | 2 | 3 | 4 }>>([]);
+  const shownAtRef = React.useRef(0);
 
   const currentCard = cards[currentIndex];
   const isFinished = currentIndex >= cards.length;
@@ -29,14 +31,20 @@ export function ReviewSession({ cards, onComplete, onExit }: ReviewSessionProps)
 
     const prevFsrs = { ...currentCard.fsrs };
     const { nextState } = calculateNextState(currentCard.fsrs, rating);
-    await updateCardReview(currentCard.id, nextState, rating, 3000);
+    const elapsed = Math.min(60000, Math.max(0, Date.now() - shownAtRef.current));
+    await updateCardReview(currentCard.id, nextState, rating, elapsed);
 
-    setHistory(prev => [...prev, { card: currentCard, prevFsrs }]);
+    setHistory(prev => [...prev, { card: currentCard, prevFsrs, rating }]);
     setReviewedCount(c => c + 1);
     setShowAnswer(false);
     setShowHint(false);
     setCurrentIndex(i => i + 1);
   }, [currentCard]);
+
+  // Restart the response timer whenever a new card appears
+  useEffect(() => {
+    shownAtRef.current = Date.now();
+  }, [currentIndex]);
 
   const handleUndo = React.useCallback(async () => {
     if (history.length === 0 || currentIndex === 0) return;
@@ -53,7 +61,11 @@ export function ReviewSession({ cards, onComplete, onExit }: ReviewSessionProps)
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isFinished) return;
+      if (isFinished || e.metaKey || e.ctrlKey || e.altKey) return;
+      // Don't hijack typing or native button activation
+      const t = e.target as HTMLElement | null;
+      if (t && (['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName) || t.isContentEditable)) return;
+      if (t && t.tagName === 'BUTTON' && (e.code === 'Space' || e.key === 'Enter')) return;
 
       if (e.key.toLowerCase() === 'z') {
         e.preventDefault();
@@ -84,6 +96,7 @@ export function ReviewSession({ cards, onComplete, onExit }: ReviewSessionProps)
           particleCount: 80,
           spread: 70,
           origin: { y: 0.6 },
+          disableForReducedMotion: true,
         });
       } catch (e) {
         // Ignore in headless
@@ -92,48 +105,90 @@ export function ReviewSession({ cards, onComplete, onExit }: ReviewSessionProps)
   }, [isFinished, reviewedCount]);
 
   if (isFinished || !currentCard) {
+    const total = history.length;
+    const counts = { 1: 0, 2: 0, 3: 0, 4: 0 } as Record<number, number>;
+    history.forEach(h => (counts[h.rating] += 1));
+    const retention = total ? Math.round(((counts[3] + counts[4]) / total) * 100) : 0;
+    const hardest = history.filter(h => h.rating === 1).slice(0, 3);
     return (
-      <div className="fixed inset-0 z-50 bg-stone-900/90 backdrop-blur-md flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white dark:bg-stone-900 rounded-3xl p-8 border border-stone-200 dark:border-stone-800 text-center space-y-6 shadow-2xl animate-in zoom-in-95">
-          <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
-            <Award className="w-8 h-8" />
-          </div>
-
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
-              Session Complete!
-            </h2>
-            <p className="text-sm text-stone-500">
-              You reviewed {reviewedCount} {reviewedCount === 1 ? 'card' : 'cards'}. All scheduled spaced repetition intervals have been recalculated.
-            </p>
-          </div>
-
-          <button
-            onClick={onComplete}
-            className="w-full py-3 bg-stone-900 hover:bg-stone-800 text-stone-50 dark:bg-stone-100 dark:hover:bg-white dark:text-stone-950 font-semibold text-sm rounded-xl transition-all shadow-xs cursor-pointer"
-          >
-            Return to Study Hub
-          </button>
+      <Dialog
+        isOpen
+        onClose={onComplete}
+        title="Session complete"
+        panelClassName="w-full max-w-md max-h-[90dvh] overflow-y-auto bg-white dark:bg-stone-900 rounded-3xl p-8 border border-stone-200 dark:border-stone-800 text-center space-y-6 shadow-2xl animate-in zoom-in-95"
+      >
+        <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center mx-auto" aria-hidden="true">
+          <Award className="w-8 h-8" />
         </div>
-      </div>
+
+        <p className="text-sm text-stone-600 dark:text-stone-400">
+          You reviewed {reviewedCount} {reviewedCount === 1 ? 'card' : 'cards'}. Intervals have been rescheduled.
+        </p>
+
+        {total > 0 && (
+          <>
+            <dl className="grid grid-cols-4 gap-2 text-center">
+              {([['Again', 1], ['Hard', 2], ['Good', 3], ['Easy', 4]] as const).map(([label, r]) => (
+                <div key={label} className="rounded-xl bg-stone-100 dark:bg-stone-800 py-2">
+                  <dd className="text-lg font-bold tabular-nums text-stone-900 dark:text-stone-100">{counts[r]}</dd>
+                  <dt className="text-xs text-stone-600 dark:text-stone-400">{label}</dt>
+                </div>
+              ))}
+            </dl>
+            <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">{retention}% recalled (Good or Easy)</p>
+          </>
+        )}
+
+        {hardest.length > 0 && (
+          <div className="text-left space-y-1.5">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-400">Needs another look</h3>
+            <ul className="space-y-1 text-sm text-stone-800 dark:text-stone-200 list-disc pl-5">
+              {hardest.map(h => (
+                <li key={h.card.id} className="line-clamp-2">{h.card.front}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <button
+          data-autofocus
+          onClick={onComplete}
+          className="w-full py-3 bg-stone-900 hover:bg-stone-800 text-stone-50 dark:bg-stone-100 dark:hover:bg-white dark:text-stone-950 font-semibold text-sm rounded-xl transition-colors shadow-xs"
+        >
+          Return to study hub
+        </button>
+      </Dialog>
     );
   }
 
   const intervalPreviews = previewNextIntervals(currentCard.fsrs);
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-100 dark:bg-stone-950 flex flex-col justify-between p-4 md:p-8 select-none">
+    <Dialog
+      isOpen
+      onClose={onExit}
+      title="Flashcard review"
+      hideTitle
+      panelClassName="fixed inset-0 bg-stone-100 dark:bg-stone-950 text-stone-900 dark:text-stone-100 flex flex-col justify-between p-4 md:p-8 select-none overflow-y-auto"
+    >
       {/* Top Header */}
       <div className="max-w-2xl w-full mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold text-stone-500">
+          <span className="text-xs font-semibold text-stone-600 dark:text-stone-400">
             Card {currentIndex + 1} of {cards.length}
           </span>
           {/* Progress pill */}
-          <div className="w-24 bg-stone-200 dark:bg-stone-800 h-1.5 rounded-full overflow-hidden">
+          <div
+            role="progressbar"
+            aria-label="Review progress"
+            aria-valuemin={0}
+            aria-valuemax={cards.length}
+            aria-valuenow={currentIndex}
+            className="w-24 bg-stone-200 dark:bg-stone-800 h-1.5 rounded-full overflow-hidden"
+          >
             <div
-              className="bg-stone-900 dark:bg-stone-100 h-full rounded-full transition-all"
-              style={{ width: `${Math.round(((currentIndex + 1) / cards.length) * 100)}%` }}
+              className="bg-stone-900 dark:bg-stone-100 h-full w-full origin-left rounded-full transition-transform duration-200"
+              style={{ transform: `scaleX(${(currentIndex + 1) / cards.length})` }}
             />
           </div>
         </div>
@@ -152,8 +207,9 @@ export function ReviewSession({ cards, onComplete, onExit }: ReviewSessionProps)
 
           <button
             onClick={onExit}
-            className="p-2 rounded-xl text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200 dark:hover:bg-stone-900 transition-colors cursor-pointer"
+            className="p-2 rounded-xl text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200 dark:hover:bg-stone-900 transition-colors cursor-pointer"
             title="Exit review"
+            aria-label="Exit review"
           >
             <X className="w-5 h-5" />
           </button>
@@ -166,14 +222,15 @@ export function ReviewSession({ cards, onComplete, onExit }: ReviewSessionProps)
           onClick={() => {
             if (!showAnswer) setShowAnswer(true);
           }}
+          aria-live="polite"
           className={`min-h-80 md:min-h-96 bg-white dark:bg-stone-900 rounded-3xl border border-stone-200 dark:border-stone-800 p-8 shadow-md flex flex-col justify-between transition-all ${
             !showAnswer ? 'cursor-pointer hover:border-stone-400 dark:hover:border-stone-700' : ''
           }`}
         >
           {/* Card Top: Concept Tag & Chapter */}
-          <div className="flex items-center justify-between text-xs text-stone-500 font-medium">
+          <div className="flex items-center justify-between text-xs text-stone-600 dark:text-stone-400 font-medium">
             <span className="capitalize">{currentCard.chapterTitle || 'Chapter Card'}</span>
-            <span className="text-stone-400">{currentCard.conceptKey}</span>
+            <span className="text-stone-600 dark:text-stone-400">{currentCard.conceptKey}</span>
           </div>
 
           {/* Front Question */}
@@ -191,13 +248,13 @@ export function ReviewSession({ cards, onComplete, onExit }: ReviewSessionProps)
                       e.stopPropagation();
                       setShowHint(true);
                     }}
-                    className="inline-flex items-center gap-1.5 text-xs text-stone-400 hover:text-stone-600 dark:hover:text-stone-300"
+                    className="inline-flex items-center gap-1.5 text-xs text-stone-600 dark:text-stone-400 hover:text-stone-600 dark:hover:text-stone-300"
                   >
                     <HelpCircle className="w-3.5 h-3.5" />
                     <span>Show hint</span>
                   </button>
                 ) : (
-                  <div className="text-xs italic text-stone-500 bg-stone-50 dark:bg-stone-800/60 p-2.5 rounded-xl border border-stone-100 dark:border-stone-800">
+                  <div className="text-xs italic text-stone-600 dark:text-stone-400 bg-stone-50 dark:bg-stone-800/60 p-2.5 rounded-xl border border-stone-100 dark:border-stone-800">
                     Hint: {currentCard.hint}
                   </div>
                 )}
@@ -208,7 +265,7 @@ export function ReviewSession({ cards, onComplete, onExit }: ReviewSessionProps)
           {/* Back Target (Answer) */}
           {showAnswer ? (
             <div className="pt-6 border-t border-stone-100 dark:border-stone-800 animate-in fade-in duration-150 space-y-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-400 block">
+              <span className="text-xs font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-400 block">
                 Answer & Key Reasoning
               </span>
               <p className="text-base md:text-lg text-stone-800 dark:text-stone-200 whitespace-pre-line leading-relaxed">
@@ -216,7 +273,7 @@ export function ReviewSession({ cards, onComplete, onExit }: ReviewSessionProps)
               </p>
             </div>
           ) : (
-            <div className="text-center text-xs text-stone-400 pt-4 border-t border-stone-100 dark:border-stone-800/80">
+            <div className="text-center text-xs text-stone-600 dark:text-stone-400 pt-4 border-t border-stone-100 dark:border-stone-800/80">
               Tap card or press <kbd className="px-1.5 py-0.5 font-mono bg-stone-100 dark:bg-stone-800 rounded">Space</kbd> to reveal answer
             </div>
           )}
@@ -242,8 +299,8 @@ export function ReviewSession({ cards, onComplete, onExit }: ReviewSessionProps)
               <span className="text-xs md:text-sm font-bold text-red-700 dark:text-red-300">
                 Again
               </span>
-              <span className="text-[11px] text-red-500">
-                {intervalPreviews[1]} <span className="text-[10px] opacity-60">(1)</span>
+              <span className="text-xs text-red-500">
+                {intervalPreviews[1]} <span className="text-xs opacity-60">(1)</span>
               </span>
             </button>
 
@@ -255,8 +312,8 @@ export function ReviewSession({ cards, onComplete, onExit }: ReviewSessionProps)
               <span className="text-xs md:text-sm font-bold text-amber-700 dark:text-amber-300">
                 Hard
               </span>
-              <span className="text-[11px] text-amber-600 dark:text-amber-400">
-                {intervalPreviews[2]} <span className="text-[10px] opacity-60">(2)</span>
+              <span className="text-xs text-amber-800 dark:text-amber-400">
+                {intervalPreviews[2]} <span className="text-xs opacity-60">(2)</span>
               </span>
             </button>
 
@@ -268,8 +325,8 @@ export function ReviewSession({ cards, onComplete, onExit }: ReviewSessionProps)
               <span className="text-xs md:text-sm font-bold text-blue-700 dark:text-blue-300">
                 Good
               </span>
-              <span className="text-[11px] text-blue-600 dark:text-blue-400">
-                {intervalPreviews[3]} <span className="text-[10px] opacity-60">(3)</span>
+              <span className="text-xs text-blue-600 dark:text-blue-400">
+                {intervalPreviews[3]} <span className="text-xs opacity-60">(3)</span>
               </span>
             </button>
 
@@ -281,13 +338,13 @@ export function ReviewSession({ cards, onComplete, onExit }: ReviewSessionProps)
               <span className="text-xs md:text-sm font-bold text-emerald-700 dark:text-emerald-300">
                 Easy
               </span>
-              <span className="text-[11px] text-emerald-600 dark:text-emerald-400">
-                {intervalPreviews[4]} <span className="text-[10px] opacity-60">(4)</span>
+              <span className="text-xs text-emerald-700 dark:text-emerald-400">
+                {intervalPreviews[4]} <span className="text-xs opacity-60">(4)</span>
               </span>
             </button>
           </div>
         )}
       </div>
-    </div>
+    </Dialog>
   );
 }

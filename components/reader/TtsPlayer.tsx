@@ -1,150 +1,160 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Volume2, Play, Pause, Square, VolumeX } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Volume2, Play, Pause, Square } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
 
 interface TtsPlayerProps {
   textToRead: string;
   chapterTitle: string;
 }
 
-export function TtsPlayer({ textToRead, chapterTitle }: TtsPlayerProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [rate, setRate] = useState(1.0);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [selectedVoice, setSelectedVoice] = useState<string>('');
+const RATES = [1, 1.25, 1.5];
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      const loadVoices = () => {
-        const available = window.speechSynthesis.getVoices();
-        setVoices(available);
-        if (available.length > 0) {
-          const defaultVoice = available.find(v => v.lang.startsWith('en') && !v.name.includes('Google')) || available[0];
-          if (defaultVoice) {
-            setSelectedVoice(prev => prev || defaultVoice.name);
-          }
-        }
-      };
-
-      loadVoices();
-      window.speechSynthesis.onvoiceschanged = loadVoices;
+/** Split text into sentence-aligned chunks (<= ~220 chars) so long chapters read fully and resume cleanly. */
+function toChunks(text: string): string[] {
+  const clean = text.replace(/[*_#`[\]]/g, ' ').replace(/\s+/g, ' ').trim();
+  const sentences = clean.match(/[^.!?]+[.!?]+["')\]]*|[^.!?]+$/g) || [clean];
+  const chunks: string[] = [];
+  let cur = '';
+  for (const s of sentences) {
+    if ((cur + s).length > 220 && cur) {
+      chunks.push(cur.trim());
+      cur = s;
+    } else {
+      cur += (cur ? ' ' : '') + s.trim();
     }
+  }
+  if (cur.trim()) chunks.push(cur.trim());
+  return chunks.filter(Boolean);
+}
 
-    return () => {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-    };
+const btn = 'inline-flex items-center justify-center min-h-8 min-w-8 rounded-lg text-stone-800 dark:text-stone-200 hover:bg-stone-200 dark:hover:bg-stone-700';
+
+/** Read-aloud player: sentence-chunk queue with progress, pause/resume, stop and speed control. */
+export function TtsPlayer({ textToRead, chapterTitle }: TtsPlayerProps) {
+  const toast = useToast();
+  const [status, setStatus] = useState<'idle' | 'playing' | 'paused'>('idle');
+  const [rate, setRate] = useState(1);
+  const [progress, setProgress] = useState({ index: 0, total: 0 });
+  const chunksRef = useRef<string[]>([]);
+  const indexRef = useRef(0);
+  const rateRef = useRef(1);
+  const runRef = useRef(0); // invalidates stale utterance callbacks
+
+  const supported = typeof window !== 'undefined' && 'speechSynthesis' in window;
+
+  const stop = useCallback(() => {
+    runRef.current += 1;
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+    indexRef.current = 0;
+    setStatus('idle');
+    setProgress(p => ({ ...p, index: 0 }));
   }, []);
 
-  const handlePlay = () => {
-    if (!('speechSynthesis' in window)) {
-      alert('Speech synthesis is not supported in this browser.');
-      return;
-    }
-
-    if (isPaused) {
-      window.speechSynthesis.resume();
-      setIsPaused(false);
-      setIsPlaying(true);
-      return;
-    }
-
+  const speakFrom = useCallback((start: number) => {
+    const run = ++runRef.current;
     window.speechSynthesis.cancel();
-    // Clean text for speech
-    const cleanText = textToRead.replace(/[*_#`[\]]/g, ' ').slice(0, 8000);
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.rate = rate;
+    const chunks = chunksRef.current;
 
-    if (selectedVoice) {
-      const voiceObj = voices.find(v => v.name === selectedVoice);
-      if (voiceObj) utterance.voice = voiceObj;
-    }
-
-    utterance.onend = () => {
-      setIsPlaying(false);
-      setIsPaused(false);
+    const speakNext = (i: number) => {
+      if (run !== runRef.current) return;
+      if (i >= chunks.length) {
+        indexRef.current = 0;
+        setStatus('idle');
+        setProgress(p => ({ ...p, index: 0 }));
+        return;
+      }
+      indexRef.current = i;
+      setProgress({ index: i, total: chunks.length });
+      const u = new SpeechSynthesisUtterance(chunks[i]);
+      u.rate = rateRef.current;
+      u.onend = () => speakNext(i + 1);
+      u.onerror = e => {
+        if (run === runRef.current && (e as SpeechSynthesisErrorEvent).error !== 'interrupted') {
+          setStatus('idle');
+        }
+      };
+      window.speechSynthesis.speak(u);
     };
+    setStatus('playing');
+    speakNext(start);
+  }, []);
 
-    utterance.onerror = () => {
-      setIsPlaying(false);
-      setIsPaused(false);
+  // Stop when the chapter changes or the player unmounts
+  useEffect(() => {
+    chunksRef.current = [];
+    return () => {
+      runRef.current += 1;
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     };
+  }, [textToRead]);
 
-    window.speechSynthesis.speak(utterance);
-    setIsPlaying(true);
-    setIsPaused(false);
+  const play = () => {
+    if (!supported) {
+      toast({ message: 'Read aloud isn’t supported in this browser.', tone: 'error' });
+      return;
+    }
+    if (status === 'paused') {
+      window.speechSynthesis.resume();
+      setStatus('playing');
+      return;
+    }
+    chunksRef.current = toChunks(textToRead);
+    setProgress({ index: 0, total: chunksRef.current.length });
+    speakFrom(0);
   };
 
-  const handlePause = () => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.pause();
-      setIsPlaying(false);
-      setIsPaused(true);
-    }
+  const pause = () => {
+    window.speechSynthesis.pause();
+    setStatus('paused');
   };
 
-  const handleStop = () => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      setIsPlaying(false);
-      setIsPaused(false);
-    }
-  };
-
-  const handleRateChange = (newRate: number) => {
-    setRate(newRate);
-    if (isPlaying) {
-      handleStop();
-      setTimeout(handlePlay, 100);
-    }
+  const changeRate = (r: number) => {
+    setRate(r);
+    rateRef.current = r;
+    if (status === 'playing') speakFrom(indexRef.current); // resume from the current sentence at the new speed
   };
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 bg-stone-100 dark:bg-stone-800/80 rounded-xl text-xs text-stone-700 dark:text-stone-300">
-      <Volume2 className="w-4 h-4 text-stone-500 shrink-0" />
+    <div
+      role="group"
+      aria-label={`Read aloud: ${chapterTitle}`}
+      className="flex items-center gap-1.5 px-2 py-1 bg-stone-100 dark:bg-stone-800/80 rounded-xl text-xs text-stone-700 dark:text-stone-300"
+    >
+      <Volume2 className="w-4 h-4 text-stone-600 dark:text-stone-400 shrink-0" aria-hidden="true" />
 
-      {/* Play/Pause */}
-      {isPlaying ? (
-        <button
-          onClick={handlePause}
-          className="p-1 text-stone-800 dark:text-stone-200 hover:text-stone-950 dark:hover:text-white"
-          title="Pause reading"
-        >
+      {status === 'playing' ? (
+        <button onClick={pause} aria-label="Pause reading" title="Pause reading" className={btn}>
           <Pause className="w-4 h-4" />
         </button>
       ) : (
-        <button
-          onClick={handlePlay}
-          className="p-1 text-stone-800 dark:text-stone-200 hover:text-stone-950 dark:hover:text-white"
-          title="Read aloud"
-        >
+        <button onClick={play} aria-label={status === 'paused' ? 'Resume reading' : 'Read chapter aloud'} title="Read aloud" className={btn}>
           <Play className="w-4 h-4" />
         </button>
       )}
 
-      {(isPlaying || isPaused) && (
-        <button
-          onClick={handleStop}
-          className="p-1 text-stone-500 hover:text-stone-800 dark:hover:text-stone-200"
-          title="Stop reading"
-        >
-          <Square className="w-3.5 h-3.5" />
-        </button>
+      {status !== 'idle' && (
+        <>
+          <button onClick={stop} aria-label="Stop reading" title="Stop reading" className={btn}>
+            <Square className="w-3.5 h-3.5" />
+          </button>
+          <span className="tabular-nums text-stone-600 dark:text-stone-400" role="status">
+            {progress.index + 1}/{progress.total}
+          </span>
+        </>
       )}
 
-      {/* Speed Rate */}
-      <div className="flex items-center gap-1 border-l border-stone-200 dark:border-stone-700 pl-2">
-        {[1, 1.25, 1.5].map(r => (
+      <div role="group" aria-label="Reading speed" className="flex items-center gap-0.5 border-l border-stone-200 dark:border-stone-700 pl-1.5">
+        {RATES.map(r => (
           <button
             key={r}
-            onClick={() => handleRateChange(r)}
-            className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+            onClick={() => changeRate(r)}
+            aria-pressed={rate === r}
+            className={`min-h-8 min-w-8 px-1.5 rounded-lg text-xs font-medium ${
               rate === r
                 ? 'bg-stone-900 text-stone-50 dark:bg-stone-100 dark:text-stone-950'
-                : 'text-stone-500 hover:text-stone-800'
+                : 'text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700'
             }`}
           >
             {r}x

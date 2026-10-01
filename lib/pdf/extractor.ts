@@ -16,7 +16,7 @@ export interface ExtractedBookData {
   pageCount: number;
   chapters: Array<Omit<Chapter, 'id' | 'bookId'>>;
   coverDataUrl?: string;
-  pdfDataUrl?: string;
+  pdfBlob?: Blob;
   fileHash: string;
   isScanned: boolean;
   scannedMessage?: string;
@@ -55,17 +55,13 @@ export async function extractPdfInBrowser(
 
   let arrayBuffer: ArrayBuffer;
   let fileName = 'Untitled Book';
-  let pdfDataUrl: string | undefined = undefined;
+  let pdfBlob: Blob | undefined = undefined;
 
   if (fileOrBuffer instanceof File) {
     fileName = fileOrBuffer.name.replace(/\.[^/.]+$/, '');
     arrayBuffer = await fileOrBuffer.arrayBuffer();
-    // Create object URL for original PDF viewer
-    try {
-      pdfDataUrl = URL.createObjectURL(fileOrBuffer);
-    } catch (e) {
-      console.warn('Could not create Object URL for PDF file', e);
-    }
+    // Keep the original file so it can be persisted in IndexedDB (blob URLs do not survive reloads)
+    pdfBlob = fileOrBuffer;
   } else {
     arrayBuffer = fileOrBuffer;
   }
@@ -288,7 +284,7 @@ export async function extractPdfInBrowser(
     pageCount: numPages,
     chapters: finalChapters,
     coverDataUrl,
-    pdfDataUrl,
+    pdfBlob,
     fileHash,
     isScanned,
     scannedMessage: isScanned

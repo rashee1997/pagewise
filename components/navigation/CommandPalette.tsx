@@ -1,189 +1,218 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Search, BookOpen, Layers, Compass, Settings, Moon, Sun, X, ArrowRight } from 'lucide-react';
-import { Book } from '@/lib/db/types';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Search, CornerDownLeft } from 'lucide-react';
+import { Dialog } from '@/components/ui/Dialog';
+
+export interface Command {
+  id: string;
+  label: string;
+  group: string;
+  icon?: React.ReactNode;
+  /** Display-only shortcut hint, e.g. "⌘J" */
+  shortcut?: string;
+  /** Extra search terms */
+  keywords?: string;
+  /** Secondary text shown at the right (e.g. author) */
+  detail?: string;
+  run: () => void;
+}
 
 interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
-  books: Book[];
-  onNavigateTab: (tab: 'today' | 'library' | 'cards' | 'settings') => void;
-  onSelectBook: (bookId: string) => void;
-  onToggleTheme: () => void;
+  commands: Command[];
+  /** Fallback offered when nothing matches (e.g. "Ask the assistant") */
+  onNoResultsAction?: (query: string) => void;
 }
 
-export function CommandPalette({
-  isOpen,
-  onClose,
-  books,
-  onNavigateTab,
-  onSelectBook,
-  onToggleTheme,
-}: CommandPaletteProps) {
+/** Subsequence-aware scorer: lower is better, -1 = no match. */
+function score(cmd: Command, q: string): number {
+  const hay = `${cmd.label} ${cmd.keywords || ''} ${cmd.detail || ''}`.toLowerCase();
+  const idx = hay.indexOf(q);
+  if (idx >= 0) return idx === 0 ? 0 : 1 + idx / 100;
+  // fuzzy: every char of q appears in order
+  let pos = 0;
+  for (const ch of q) {
+    pos = hay.indexOf(ch, pos);
+    if (pos < 0) return -1;
+    pos++;
+  }
+  return 5 + pos / 100;
+}
+
+export function CommandPalette({ isOpen, onClose, commands, onNoResultsAction }: CommandPaletteProps) {
+  return (
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Command menu"
+      hideTitle
+      placement="top"
+      panelClassName="w-full max-w-xl bg-white dark:bg-stone-900 rounded-xl shadow-2xl border border-stone-200 dark:border-stone-800 overflow-hidden"
+    >
+      {/* Dialog unmounts its children when closed, so query and selection reset on every open */}
+      <PaletteBody commands={commands} onClose={onClose} onNoResultsAction={onNoResultsAction} />
+    </Dialog>
+  );
+}
+
+function PaletteBody({ commands, onClose, onNoResultsAction }: Omit<CommandPaletteProps, 'isOpen'>) {
   const [query, setQuery] = useState('');
+  const [active, setActive] = useState(0);
+  const listRef = useRef<HTMLDivElement>(null);
+  const baseId = useId();
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return commands;
+    return commands
+      .map(c => ({ c, s: score(c, q) }))
+      .filter(x => x.s >= 0)
+      .sort((a, b) => a.s - b.s)
+      .map(x => x.c);
+  }, [commands, query]);
+
+  const activeIndex = Math.min(active, Math.max(0, results.length - 1));
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        if (isOpen) onClose();
-        else onClose(); // parent handles toggle
-      }
-      if (e.key === 'Escape' && isOpen) {
+    listRef.current?.querySelector<HTMLElement>(`[data-index="${activeIndex}"]`)?.scrollIntoView({ block: 'nearest' });
+  }, [activeIndex, results]);
+
+  const runCommand = (cmd: Command) => {
+    onClose();
+    // let the dialog restore focus first, then run
+    setTimeout(() => cmd.run(), 0);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActive(i => (results.length ? (i + 1) % results.length : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActive(i => (results.length ? (i - 1 + results.length) % results.length : 0));
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      setActive(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      setActive(Math.max(0, results.length - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const cmd = results[activeIndex];
+      if (cmd) runCommand(cmd);
+      else if (onNoResultsAction && query.trim()) {
         onClose();
+        onNoResultsAction(query.trim());
       }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+    }
+  };
 
-  if (!isOpen) return null;
+  const listId = `${baseId}-list`;
+  const optionId = (i: number) => `${baseId}-opt-${i}`;
 
-  const filteredBooks = books.filter(b =>
-    b.title.toLowerCase().includes(query.toLowerCase()) ||
-    (b.author && b.author.toLowerCase().includes(query.toLowerCase()))
-  );
+  // Group headers only when not searching
+  const showGroups = !query.trim();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-stone-900/60 dark:bg-stone-950/80 backdrop-blur-xs animate-in fade-in duration-150">
-      <div
-        className="w-full max-w-xl bg-white dark:bg-stone-900 rounded-xl shadow-2xl border border-stone-200 dark:border-stone-800 overflow-hidden"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Search Input Bar */}
-        <div className="flex items-center px-4 py-3.5 border-b border-stone-200 dark:border-stone-800 gap-3">
-          <Search className="w-5 h-5 text-stone-400 shrink-0" />
-          <input
-            autoFocus
-            type="text"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Type a command or search books..."
-            className="w-full bg-transparent text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 focus:outline-hidden"
-          />
-          <button
-            onClick={onClose}
-            className="p-1 rounded-md text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Results List */}
-        <div className="max-h-80 overflow-y-auto p-2 space-y-1">
-          {/* Main Navigation Targets */}
-          <div className="px-2 py-1 text-[11px] font-medium uppercase tracking-wider text-stone-400">
-            Navigation
-          </div>
-
-          <button
-            onClick={() => {
-              onNavigateTab('today');
-              onClose();
-            }}
-            className="w-full flex items-center justify-between px-3 py-2 text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg group text-left"
-          >
-            <div className="flex items-center gap-3">
-              <Compass className="w-4 h-4 text-stone-400 group-hover:text-stone-700 dark:group-hover:text-stone-200" />
-              <span>Go to Today & Habit Loop</span>
-            </div>
-            <ArrowRight className="w-3.5 h-3.5 text-stone-400 opacity-0 group-hover:opacity-100" />
-          </button>
-
-          <button
-            onClick={() => {
-              onNavigateTab('library');
-              onClose();
-            }}
-            className="w-full flex items-center justify-between px-3 py-2 text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg group text-left"
-          >
-            <div className="flex items-center gap-3">
-              <BookOpen className="w-4 h-4 text-stone-400 group-hover:text-stone-700 dark:group-hover:text-stone-200" />
-              <span>Go to Library</span>
-            </div>
-            <ArrowRight className="w-3.5 h-3.5 text-stone-400 opacity-0 group-hover:opacity-100" />
-          </button>
-
-          <button
-            onClick={() => {
-              onNavigateTab('cards');
-              onClose();
-            }}
-            className="w-full flex items-center justify-between px-3 py-2 text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg group text-left"
-          >
-            <div className="flex items-center gap-3">
-              <Layers className="w-4 h-4 text-stone-400 group-hover:text-stone-700 dark:group-hover:text-stone-200" />
-              <span>Go to Flashcards & Reviews</span>
-            </div>
-            <ArrowRight className="w-3.5 h-3.5 text-stone-400 opacity-0 group-hover:opacity-100" />
-          </button>
-
-          <button
-            onClick={() => {
-              onNavigateTab('settings');
-              onClose();
-            }}
-            className="w-full flex items-center justify-between px-3 py-2 text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg group text-left"
-          >
-            <div className="flex items-center gap-3">
-              <Settings className="w-4 h-4 text-stone-400 group-hover:text-stone-700 dark:group-hover:text-stone-200" />
-              <span>Settings & AI Providers</span>
-            </div>
-            <ArrowRight className="w-3.5 h-3.5 text-stone-400 opacity-0 group-hover:opacity-100" />
-          </button>
-
-          <button
-            onClick={() => {
-              onToggleTheme();
-              onClose();
-            }}
-            className="w-full flex items-center justify-between px-3 py-2 text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg group text-left"
-          >
-            <div className="flex items-center gap-3">
-              <Sun className="w-4 h-4 text-stone-400 group-hover:text-stone-700 dark:group-hover:text-stone-200" />
-              <span>Toggle Dark / Light Theme</span>
-            </div>
-            <ArrowRight className="w-3.5 h-3.5 text-stone-400 opacity-0 group-hover:opacity-100" />
-          </button>
-
-          {/* Books in Library */}
-          {filteredBooks.length > 0 && (
-            <>
-              <div className="px-2 pt-3 pb-1 text-[11px] font-medium uppercase tracking-wider text-stone-400">
-                Books
-              </div>
-              {filteredBooks.map(book => (
-                <button
-                  key={book.id}
-                  onClick={() => {
-                    onSelectBook(book.id);
-                    onClose();
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-sm text-stone-800 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg group text-left"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <BookOpen className="w-4 h-4 text-stone-400 shrink-0" />
-                    <div className="truncate">
-                      <span className="font-medium">{book.title}</span>
-                      {book.author && (
-                        <span className="text-xs text-stone-400 ml-2">by {book.author}</span>
-                      )}
-                    </div>
-                  </div>
-                  <span className="text-xs text-stone-400 shrink-0">Open Reader →</span>
-                </button>
-              ))}
-            </>
-          )}
-        </div>
-
-        {/* Palette Footer */}
-        <div className="px-4 py-2 bg-stone-50 dark:bg-stone-950 border-t border-stone-200 dark:border-stone-800 text-[11px] text-stone-400 flex items-center justify-between">
-          <span>Navigate with mouse or arrow keys</span>
-          <span>Press ESC to close</span>
-        </div>
+    <>
+      <div className="flex items-center px-4 py-3.5 border-b border-stone-200 dark:border-stone-800 gap-3">
+        <Search className="w-5 h-5 text-stone-600 dark:text-stone-400 shrink-0" aria-hidden="true" />
+        <input
+          data-autofocus
+          type="text"
+          role="combobox"
+          aria-expanded="true"
+          aria-controls={listId}
+          aria-activedescendant={results.length ? optionId(activeIndex) : undefined}
+          aria-autocomplete="list"
+          aria-label="Search commands, books and chapters"
+          value={query}
+          onChange={e => {
+            setQuery(e.target.value);
+            setActive(0);
+          }}
+          onKeyDown={onKeyDown}
+          placeholder="Type a command or search…"
+          className="w-full bg-transparent text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-600 dark:placeholder:text-stone-400 focus:outline-hidden"
+        />
+        <kbd className="hidden sm:inline px-1.5 py-0.5 text-xs font-mono bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded text-stone-600 dark:text-stone-400">
+          Esc
+        </kbd>
       </div>
-    </div>
+
+      <div ref={listRef} id={listId} role="listbox" aria-label="Results" className="max-h-80 overflow-y-auto overscroll-contain p-2">
+        {results.map((cmd, i) => {
+          const header = showGroups && (i === 0 || results[i - 1].group !== cmd.group) ? cmd.group : null;
+          const isActive = i === activeIndex;
+          return (
+            <React.Fragment key={cmd.id}>
+              {header && (
+                <div role="presentation" className="px-2 pt-2 pb-1 text-xs font-medium uppercase tracking-wider text-stone-600 dark:text-stone-400">
+                  {header}
+                </div>
+              )}
+              <div
+                id={optionId(i)}
+                data-index={i}
+                role="option"
+                aria-selected={isActive}
+                onMouseMove={() => setActive(i)}
+                onClick={() => runCommand(cmd)}
+                className={`flex items-center justify-between gap-3 px-3 py-2.5 text-sm rounded-lg cursor-pointer ${
+                  isActive
+                    ? 'bg-stone-100 dark:bg-stone-800 text-stone-900 dark:text-stone-100'
+                    : 'text-stone-700 dark:text-stone-300'
+                }`}
+              >
+                <span className="flex items-center gap-3 min-w-0">
+                  <span className="text-stone-600 dark:text-stone-400 shrink-0" aria-hidden="true">
+                    {cmd.icon}
+                  </span>
+                  <span className="truncate">{cmd.label}</span>
+                  {cmd.detail && <span className="text-xs text-stone-600 dark:text-stone-400 truncate">{cmd.detail}</span>}
+                </span>
+                {cmd.shortcut ? (
+                  <kbd className="px-1.5 py-0.5 text-xs font-mono bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded text-stone-600 dark:text-stone-400 shrink-0">
+                    {cmd.shortcut}
+                  </kbd>
+                ) : isActive ? (
+                  <CornerDownLeft className="w-3.5 h-3.5 text-stone-600 dark:text-stone-400 shrink-0" aria-hidden="true" />
+                ) : null}
+              </div>
+            </React.Fragment>
+          );
+        })}
+
+        {results.length === 0 && (
+          <div className="px-3 py-8 text-center text-sm text-stone-600 dark:text-stone-400 space-y-2">
+            <p>No results for “{query}”</p>
+            {onNoResultsAction && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onNoResultsAction(query.trim());
+                }}
+                className="px-3 py-1.5 rounded-lg bg-stone-900 text-stone-50 dark:bg-stone-100 dark:text-stone-900 text-xs font-semibold"
+              >
+                Ask the assistant instead
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div aria-live="polite" className="sr-only">
+        {results.length} {results.length === 1 ? 'result' : 'results'}
+      </div>
+
+      <div className="px-4 py-2 bg-stone-50 dark:bg-stone-950 border-t border-stone-200 dark:border-stone-800 text-xs text-stone-600 dark:text-stone-400 flex items-center justify-between">
+        <span>↑↓ to navigate · Enter to select</span>
+        <span>
+          <kbd className="font-mono">?</kbd> for shortcuts
+        </span>
+      </div>
+    </>
   );
 }

@@ -87,7 +87,7 @@ export function KeyIdeasMode({ book, chapter, settings }: KeyIdeasModeProps) {
           <h2 className="text-xl md:text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
             Key Ideas & Mental Models
           </h2>
-          <p className="text-xs text-stone-500">
+          <p className="text-xs text-stone-600 dark:text-stone-400">
             {chapter.title}
           </p>
         </div>
@@ -134,7 +134,7 @@ export function KeyIdeasMode({ book, chapter, settings }: KeyIdeasModeProps) {
               className="p-6 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl shadow-2xs space-y-4"
             >
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-xs shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-400 flex items-center justify-center font-bold text-xs shrink-0">
                   {idx + 1}
                 </div>
                 <h3 className="text-base md:text-lg font-bold text-stone-900 dark:text-stone-100">
@@ -154,7 +154,7 @@ export function KeyIdeasMode({ book, chapter, settings }: KeyIdeasModeProps) {
 
               {idea.actionableInsight && (
                 <div className="flex items-start gap-2 text-xs text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 p-3 rounded-xl border border-emerald-200 dark:border-emerald-900">
-                  <Compass className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                  <Compass className="w-4 h-4 shrink-0 mt-0.5 text-emerald-700 dark:text-emerald-400" />
                   <div>
                     <span className="font-semibold block mb-0.5">Practical Application:</span>
                     <span>{idea.actionableInsight}</span>
@@ -168,11 +168,11 @@ export function KeyIdeasMode({ book, chapter, settings }: KeyIdeasModeProps) {
 
       {!isLoading && !ideas && !error && (
         <div className="py-16 text-center space-y-3 bg-stone-50 dark:bg-stone-900/50 rounded-2xl border border-dashed border-stone-200 dark:border-stone-800 p-8">
-          <Lightbulb className="w-8 h-8 text-stone-400 mx-auto" />
+          <Lightbulb className="w-8 h-8 text-stone-600 dark:text-stone-400 mx-auto" />
           <h3 className="text-base font-semibold text-stone-800 dark:text-stone-200">
             No key ideas extracted yet
           </h3>
-          <p className="text-xs text-stone-500 max-w-sm mx-auto">
+          <p className="text-xs text-stone-600 dark:text-stone-400 max-w-sm mx-auto">
             Extract the timeless principles and mental models from this chapter.
           </p>
         </div>
