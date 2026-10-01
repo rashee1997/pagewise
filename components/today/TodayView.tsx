@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Book, AppSettings } from '@/lib/db/types';
+import { updateAppSettings } from '@/lib/db';
 import { Flame, Layers, Clock, ArrowRight, BookOpen, Sparkles, RefreshCw, Plus, CheckCircle2, TrendingUp } from 'lucide-react';
 import { getLast7DaysActivity, DayReadingSummary } from '@/lib/habit/streak';
 
@@ -13,6 +14,7 @@ interface TodayViewProps {
   onOpenBook: (bookId: string) => void;
   onStartReview: () => void;
   onOpenUpload: () => void;
+  onUpdateSettings?: (newSettings: AppSettings) => void;
 }
 
 const DEFAULT_MOTIVATIONS = [
@@ -46,6 +48,7 @@ export function TodayView({
   onOpenBook,
   onStartReview,
   onOpenUpload,
+  onUpdateSettings,
 }: TodayViewProps) {
   // Motivation quote state
   const [motivationIndex, setMotivationIndex] = useState(() => {
@@ -212,17 +215,58 @@ export function TodayView({
           </div>
         </div>
 
-        {/* Daily Goal */}
-        <div className="bg-white dark:bg-stone-900 p-4 rounded-xl border border-stone-200 dark:border-stone-800 flex items-center gap-3.5 shadow-2xs">
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-            <Clock className="w-5 h-5" />
+        {/* Daily Goal with Circular Progress Indicator */}
+        <div className="bg-white dark:bg-stone-900 p-4 rounded-xl border border-stone-200 dark:border-stone-800 flex items-center gap-4 shadow-2xs">
+          <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 80 80">
+              <circle
+                cx="40"
+                cy="40"
+                r="34"
+                className="stroke-stone-100 dark:stroke-stone-800"
+                strokeWidth="8"
+                fill="transparent"
+              />
+              <circle
+                cx="40"
+                cy="40"
+                r="34"
+                className="stroke-emerald-600 dark:stroke-emerald-400 transition-all duration-500 ease-out"
+                strokeWidth="8"
+                strokeDasharray={2 * Math.PI * 34}
+                strokeDashoffset={(2 * Math.PI * 34) - (Math.min(100, goalPercent) / 100) * (2 * Math.PI * 34)}
+                strokeLinecap="round"
+                fill="transparent"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-stone-900 dark:text-stone-100">
+              {goalPercent}%
+            </div>
           </div>
-          <div className="flex-1">
-            <div className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
+          <div className="flex-1 min-w-0">
+            <div className="text-base font-bold tracking-tight text-stone-900 dark:text-stone-100 truncate">
               {todayMinutes} / {goalMinutes} min
             </div>
-            <div className="text-xs text-stone-500 dark:text-stone-400">
-              {goalPercent}% Daily Goal
+            <div className="flex items-center gap-1.5 pt-0.5">
+              <span className="text-[11px] text-stone-500 dark:text-stone-400 truncate">
+                {minutesLeft > 0 ? `${minutesLeft}m left` : 'Goal met!'}
+              </span>
+              <span className="text-[10px] text-stone-400">·</span>
+              <select
+                value={goalMinutes}
+                onChange={async e => {
+                  const mins = Number(e.target.value);
+                  const updated = await updateAppSettings({ dailyGoalMinutes: mins });
+                  if (onUpdateSettings) onUpdateSettings(updated);
+                }}
+                className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-transparent cursor-pointer focus:outline-hidden"
+              >
+                {[10, 15, 20, 30, 45, 60].map(m => (
+                  <option key={m} value={m} className="bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100">
+                    Target: {m}m
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>

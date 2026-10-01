@@ -176,6 +176,7 @@ export default function PagewiseApp() {
             onOpenBook={handleOpenBook}
             onStartReview={() => setActiveTab('cards')}
             onOpenUpload={() => setIsUploadOpen(true)}
+            onUpdateSettings={s => setSettings(s)}
           />
         )}
 

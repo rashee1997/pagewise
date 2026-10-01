@@ -176,6 +176,14 @@ ${existingKeyNotice}`;
 - "definition": clear explanation in modern terms
 - "contextUsage": how it was used in this chapter.`;
       prompt = `Book: "${bookTitle || 'Untitled'}"\nChapter: "${chapterTitle || 'Chapter'}"\n\nChapter Content:\n${safeChapterText}\n\nExtract 5-10 key vocabulary/domain terms in JSON format.`;
+    } else if (kind === 'lessons') {
+      responseMimeType = 'application/json';
+      systemInstruction += ` Extract structured core lessons and practical takeaways from this chapter. Output strictly a JSON array of objects with keys:
+- "title": concise title of the lesson
+- "corePrinciple": the fundamental principle taught
+- "context": why this lesson matters in the chapter context
+- "actionableStep": how the reader can apply this lesson in life or work`;
+      prompt = `Book: "${bookTitle || 'Untitled'}"\nChapter: "${chapterTitle || 'Chapter'}"\n\nChapter Content:\n${safeChapterText}\n\nExtract 4-8 core structured lessons from this chapter in JSON array format.`;
     } else if (kind === 'explain_selection') {
       systemInstruction += ` You explain complex passages clearly. Be direct, insightful, and accessible. Use markdown formatting.`;
       prompt = `In the book "${bookTitle || 'Book'}" (${chapterTitle || ''}), the reader highlighted this passage:\n\n> "${selectedText}"\n\nContext around it in chapter:\n${safeChapterText.slice(0, 3000)}\n\nExplain what this passage means, its significance, and underlying implications in 2-3 clear paragraphs.`;

@@ -177,7 +177,7 @@ export async function getChapterMaterial<T>(chapterId: string, kind: string): Pr
 export async function saveChapterMaterial(
   bookId: string,
   chapterId: string,
-  kind: 'summary' | 'keyIdeas' | 'quiz' | 'glossary',
+  kind: 'summary' | 'keyIdeas' | 'lessons' | 'quiz' | 'glossary',
   payload: unknown
 ): Promise<void> {
   const existing = await db.chapterMaterials.where(['chapterId', 'kind']).equals([chapterId, kind]).first();

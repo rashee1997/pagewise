@@ -68,7 +68,7 @@ export interface GenerationRecord {
   id: string;
   bookId: string;
   chapterId: string;
-  kind: 'summary' | 'keyIdeas' | 'cards' | 'quiz' | 'glossary';
+  kind: 'summary' | 'keyIdeas' | 'lessons' | 'cards' | 'quiz' | 'glossary';
   inputHash: string;
   promptVersion: string;
   batch: number;
@@ -89,6 +89,14 @@ export interface KeyIdea {
   actionableInsight?: string;
 }
 
+export interface Lesson {
+  title: string;
+  corePrinciple: string;
+  context: string;
+  actionableStep: string;
+  isManual?: boolean;
+}
+
 export interface QuizQuestion {
   id: string;
   question: string;
@@ -107,8 +115,8 @@ export interface ChapterMaterial {
   id: string;
   chapterId: string;
   bookId: string;
-  kind: 'summary' | 'keyIdeas' | 'quiz' | 'glossary';
-  payload: ChapterSummary | KeyIdea[] | QuizQuestion[] | GlossaryItem[];
+  kind: 'summary' | 'keyIdeas' | 'lessons' | 'quiz' | 'glossary';
+  payload: ChapterSummary | KeyIdea[] | Lesson[] | QuizQuestion[] | GlossaryItem[];
   createdAt: number;
 }
 

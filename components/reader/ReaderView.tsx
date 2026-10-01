@@ -26,9 +26,11 @@ import {
   BookMarked,
   X,
   Volume2,
+  Compass,
 } from 'lucide-react';
 import { SummaryMode } from './SummaryMode';
 import { KeyIdeasMode } from './KeyIdeasMode';
+import { LessonsMode } from './LessonsMode';
 import { CardsMode } from './CardsMode';
 import { QuizMode } from './QuizMode';
 import { GlossaryMode } from './GlossaryMode';
@@ -36,8 +38,39 @@ import { SelectionMenu } from './SelectionMenu';
 import { ReaderPreferences } from './ReaderPreferences';
 import { TtsPlayer } from './TtsPlayer';
 import { AssistantDrawer } from '../assistant/AssistantDrawer';
+import { cleanPdfText } from '@/lib/pdf/clean';
 
-export type ReaderMode = 'read' | 'summary' | 'keyIdeas' | 'cards' | 'quiz' | 'glossary';
+export type ReaderMode = 'read' | 'summary' | 'keyIdeas' | 'lessons' | 'cards' | 'quiz' | 'glossary';
+
+function formatChapterParagraphs(rawText: string): string[] {
+  const cleaned = cleanPdfText(rawText);
+  const rawParagraphs = cleaned.split(/\n\s*\n/);
+  const formatted: string[] = [];
+
+  for (const p of rawParagraphs) {
+    const trimmed = p.replace(/\s+/g, ' ').trim();
+    if (trimmed.length > 0) {
+      formatted.push(trimmed);
+    }
+  }
+
+  if (formatted.length <= 1 && cleaned.length > 300) {
+    const sentences = cleaned.match(/[^.!?]+[.!?]+["']?|[^.!?]+$/g) || [cleaned];
+    let currentChunk = '';
+    const chunks: string[] = [];
+    for (const s of sentences) {
+      currentChunk += (currentChunk ? ' ' : '') + s.trim();
+      if (currentChunk.length > 400) {
+        chunks.push(currentChunk);
+        currentChunk = '';
+      }
+    }
+    if (currentChunk) chunks.push(currentChunk);
+    if (chunks.length > 1) return chunks;
+  }
+
+  return formatted.length > 0 ? formatted : [cleaned];
+}
 
 interface ReaderViewProps {
   book: Book;
@@ -320,6 +353,7 @@ export function ReaderView({
     { id: 'read', label: 'Read', icon: <BookOpen className="w-3.5 h-3.5" /> },
     { id: 'summary', label: 'Summary', icon: <FileText className="w-3.5 h-3.5" /> },
     { id: 'keyIdeas', label: 'Key Ideas', icon: <Lightbulb className="w-3.5 h-3.5" /> },
+    { id: 'lessons', label: 'Lessons', icon: <Compass className="w-3.5 h-3.5" /> },
     { id: 'cards', label: 'Flashcards', icon: <Layers className="w-3.5 h-3.5" /> },
     { id: 'quiz', label: 'Quiz', icon: <HelpCircle className="w-3.5 h-3.5" /> },
     { id: 'glossary', label: 'Glossary', icon: <BookMarked className="w-3.5 h-3.5" /> },
@@ -329,8 +363,16 @@ export function ReaderView({
     <div className={`min-h-screen flex flex-col justify-between transition-colors select-text ${themeClasses}`}>
       {/* Top Header Chrome */}
       {!isFocusMode && (
-        <header className="sticky top-0 z-30 bg-white/90 dark:bg-stone-950/90 backdrop-blur-md border-b border-stone-200 dark:border-stone-800 px-4 py-2.5">
-          <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
+        <header className="sticky top-0 z-30 bg-white/90 dark:bg-stone-950/90 backdrop-blur-md border-b border-stone-200 dark:border-stone-800">
+          {/* Slim Chapter Progress Bar */}
+          <div className="w-full bg-stone-200/60 dark:bg-stone-800/60 h-0.5">
+            <div
+              className="bg-stone-900 dark:bg-stone-100 h-full transition-all duration-300"
+              style={{ width: `${Math.round(((currentChapterIndex + 1) / chapters.length) * 100)}%` }}
+            />
+          </div>
+
+          <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
             {/* Back Button & Title */}
             <div className="flex items-center gap-3 min-w-0">
               <button
@@ -479,21 +521,57 @@ export function ReaderView({
         ) : activeMode === 'read' ? (
           <div
             onMouseUp={handleMouseUp}
-            className={`${widthClasses} mx-auto space-y-6 animate-in fade-in duration-200`}
+            className={`${widthClasses} mx-auto space-y-8 animate-in fade-in duration-200`}
           >
             {/* Chapter Header */}
-            <div className="pb-6 border-b border-stone-200/60 dark:border-stone-800/60 space-y-1">
-              <span className="text-xs uppercase tracking-wider text-stone-500 font-semibold block">
+            <div className="pb-8 border-b border-stone-200/60 dark:border-stone-800/60 space-y-3 text-center sm:text-left">
+              <span className="text-xs uppercase tracking-widest text-stone-500 font-semibold block">
                 Chapter {currentChapterIndex + 1} of {chapters.length} · Pages {activeChapter.startPage}–{activeChapter.endPage}
               </span>
-              <h2 className="text-2xl md:text-3xl font-bold font-serif tracking-tight">
+              <h2 className="text-3xl md:text-4xl font-bold font-serif tracking-tight text-stone-950 dark:text-stone-50 leading-tight">
                 {activeChapter.title}
               </h2>
             </div>
 
-            {/* Clean Chapter Prose with Paragraph Spacing */}
-            <div className={`${fontClasses} ${sizeClasses} space-y-5 whitespace-pre-line text-stone-900 dark:text-stone-100`}>
-              {activeChapter.text}
+            {/* Formatted Chapter Paragraphs with Drop Cap & Clean Spacing */}
+            <div className={`${fontClasses} ${sizeClasses} text-stone-900 dark:text-stone-100`}>
+              {formatChapterParagraphs(activeChapter.text).map((para, idx) => (
+                <p
+                  key={idx}
+                  className={`mb-6 leading-relaxed ${
+                    idx === 0 && settings.readerFontFamily === 'serif'
+                      ? 'first-letter:text-5xl first-letter:font-serif first-letter:font-bold first-letter:float-left first-letter:mr-3 first-letter:leading-none first-letter:text-stone-900 dark:first-letter:text-stone-100'
+                      : ''
+                  }`}
+                >
+                  {para}
+                </p>
+              ))}
+            </div>
+
+            {/* Bottom Chapter Navigation Footer */}
+            <div className="pt-12 pb-20 flex items-center justify-between border-t border-stone-200/60 dark:border-stone-800/60">
+              <button
+                onClick={handlePrevChapter}
+                disabled={currentChapterIndex === 0}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-stone-100 dark:bg-stone-900 hover:bg-stone-200 dark:hover:bg-stone-800 disabled:opacity-40 transition-colors cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span>Previous Chapter</span>
+              </button>
+
+              <span className="text-xs text-stone-400 font-medium">
+                Chapter {currentChapterIndex + 1} of {chapters.length}
+              </span>
+
+              <button
+                onClick={handleNextChapter}
+                disabled={currentChapterIndex === chapters.length - 1}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-stone-900 text-stone-50 dark:bg-stone-100 dark:text-stone-950 hover:opacity-90 disabled:opacity-40 transition-colors cursor-pointer"
+              >
+                <span>Next Chapter</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
         ) : null}
@@ -504,6 +582,10 @@ export function ReaderView({
 
         {activeMode === 'keyIdeas' && (
           <KeyIdeasMode book={book} chapter={activeChapter} settings={settings} />
+        )}
+
+        {activeMode === 'lessons' && (
+          <LessonsMode book={book} chapter={activeChapter} settings={settings} />
         )}
 
         {activeMode === 'cards' && (

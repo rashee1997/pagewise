@@ -3,6 +3,7 @@ import { ProviderConfig } from '../db/types';
 export type AiTaskKind =
   | 'summary'
   | 'keyIdeas'
+  | 'lessons'
   | 'cards'
   | 'quiz'
   | 'glossary'
