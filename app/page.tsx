@@ -21,6 +21,7 @@ import { ReaderView } from '@/components/reader/ReaderView';
 import { CardsView } from '@/components/cards/CardsView';
 import { SettingsView } from '@/components/settings/SettingsView';
 import { UploadModal } from '@/components/library/UploadModal';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function PagewiseApp() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('today');
@@ -167,42 +168,76 @@ export default function PagewiseApp() {
 
       {/* Main Screen Body */}
       <main className="flex-1 pb-20 md:pb-8 overflow-y-auto">
-        {activeTab === 'today' && (
-          <TodayView
-            books={books}
-            dueCardsCount={dueCardsCount}
-            todayMinutes={todayMinutes}
-            settings={settings}
-            onOpenBook={handleOpenBook}
-            onStartReview={() => setActiveTab('cards')}
-            onOpenUpload={() => setIsUploadOpen(true)}
-            onUpdateSettings={s => setSettings(s)}
-          />
-        )}
+        <AnimatePresence mode="wait">
+          {activeTab === 'today' && (
+            <motion.div
+              key="today"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+            >
+              <TodayView
+                books={books}
+                dueCardsCount={dueCardsCount}
+                todayMinutes={todayMinutes}
+                settings={settings}
+                onOpenBook={handleOpenBook}
+                onStartReview={() => setActiveTab('cards')}
+                onOpenUpload={() => setIsUploadOpen(true)}
+                onUpdateSettings={s => setSettings(s)}
+              />
+            </motion.div>
+          )}
 
-        {activeTab === 'library' && (
-          <LibraryView
-            books={books}
-            onOpenBook={handleOpenBook}
-            onOpenUpload={() => setIsUploadOpen(true)}
-            onRefreshBooks={loadData}
-          />
-        )}
+          {activeTab === 'library' && (
+            <motion.div
+              key="library"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+            >
+              <LibraryView
+                books={books}
+                onOpenBook={handleOpenBook}
+                onOpenUpload={() => setIsUploadOpen(true)}
+                onRefreshBooks={loadData}
+              />
+            </motion.div>
+          )}
 
-        {activeTab === 'cards' && (
-          <CardsView
-            books={books}
-            onOpenBook={handleOpenBook}
-          />
-        )}
+          {activeTab === 'cards' && (
+            <motion.div
+              key="cards"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+            >
+              <CardsView
+                books={books}
+                onOpenBook={handleOpenBook}
+              />
+            </motion.div>
+          )}
 
-        {activeTab === 'settings' && (
-          <SettingsView
-            settings={settings}
-            onUpdateSettings={s => setSettings(s)}
-            onResetApp={loadData}
-          />
-        )}
+          {activeTab === 'settings' && (
+            <motion.div
+              key="settings"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+            >
+              <SettingsView
+                settings={settings}
+                onUpdateSettings={s => setSettings(s)}
+                onResetApp={loadData}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       {/* Upload Modal */}
