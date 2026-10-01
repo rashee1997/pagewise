@@ -1,0 +1,7 @@
+{
+  "name": "Pagewise: Book Reading & Study Companion",
+  "description": "Read PDF books with structured chaptering, concise summaries, key ideas, spaced-repetition flashcards, interactive quizzes, and a context-aware reading assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
