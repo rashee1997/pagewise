@@ -10,6 +10,8 @@ export interface CardDraft {
   front: string;
   back: string;
   drafting: boolean;
+  paragraphIndex?: number;
+  quoteSnippet?: string;
 }
 
 /** Editable flashcard created from a selected passage, with an optional AI-drafted question. */
@@ -17,7 +19,16 @@ export function useCardDraft(book: Book, chapter: Chapter, settings: AppSettings
   const toast = useToast();
   const [cardDraft, setCardDraft] = useState<CardDraft | null>(null);
 
-  const startCardDraft = (text: string) => setCardDraft({ front: '', back: normalizeQuote(text), drafting: false });
+  const startCardDraft = (text: string, paragraphIndex?: number) => {
+    const normalized = normalizeQuote(text);
+    setCardDraft({
+      front: '',
+      back: normalized,
+      drafting: false,
+      paragraphIndex,
+      quoteSnippet: normalized,
+    });
+  };
 
   const draftCardQuestion = async () => {
     if (!cardDraft) return;
@@ -52,6 +63,12 @@ export function useCardDraft(book: Book, chapter: Chapter, settings: AppSettings
     if (!cardDraft || !cardDraft.front.trim() || !cardDraft.back.trim()) return;
     const front = cardDraft.front.trim();
     const back = cardDraft.back.trim();
+    const anchor = cardDraft.quoteSnippet
+      ? {
+          paragraphIndex: cardDraft.paragraphIndex,
+          quoteSnippet: cardDraft.quoteSnippet,
+        }
+      : undefined;
     setCardDraft(null);
     const card: FlashCard = {
       id: `card_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -61,8 +78,9 @@ export function useCardDraft(book: Book, chapter: Chapter, settings: AppSettings
       type: 'basic',
       front,
       back,
-      conceptKey: 'custom-highlight',
+      conceptKey: 'source-highlight',
       fingerprint: generateFingerprint(front),
+      sourceAnchor: anchor,
       fsrs: createInitialFsrsState(),
       createdAt: Date.now(),
     };

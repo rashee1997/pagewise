@@ -50,3 +50,15 @@ export const GlossaryItemSchema = z.object({
 });
 
 export const GlossarySchema = z.array(GlossaryItemSchema).min(1).max(25);
+
+export const AudioOverviewTurnSchema = z.object({
+  speaker: z.enum(['guide', 'analyst']),
+  speakerName: z.string().min(2),
+  text: z.string().min(10),
+});
+
+export const AudioOverviewSchema = z.object({
+  title: z.string().min(3),
+  durationEstimate: z.string().min(3),
+  turns: z.array(AudioOverviewTurnSchema).min(4).max(20),
+});

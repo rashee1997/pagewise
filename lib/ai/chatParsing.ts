@@ -38,3 +38,36 @@ export function extractCard(text: string): { front: string; back: string; concep
   if (!a || (a.index ?? 0) > 3) return undefined;
   return { front: q[1].replace(/\*\*/g, '').trim(), back: a[1].replace(/\*\*/g, '').trim(), conceptKey: 'assistant-generated' };
 }
+
+export interface CitationItem {
+  index: number;
+  quote: string;
+  approximateParagraph?: number;
+  snippet?: string;
+}
+
+/** Pull grounded citation objects from a ```json-citations ... ``` block and remove the block from text. */
+export function extractCitations(text: string): { citations: CitationItem[]; cleanText: string } {
+  const match = text.match(/```(?:json-citations|citations)\s*([\s\S]*?)\s*```/i);
+  if (!match) {
+    return { citations: [], cleanText: text };
+  }
+  try {
+    const parsed = JSON.parse(match[1].trim());
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      const citations: CitationItem[] = parsed
+        .filter((c: any) => c && typeof c.quote === 'string' && c.quote.trim().length > 0)
+        .map((c: any, idx: number) => ({
+          index: typeof c.index === 'number' ? c.index : idx + 1,
+          quote: c.quote.trim(),
+          approximateParagraph: typeof c.paragraphIndex === 'number' ? c.paragraphIndex : undefined,
+          snippet: typeof c.snippet === 'string' ? c.snippet.trim() : undefined,
+        }));
+      const cleanText = text.replace(match[0], '').trim();
+      return { citations, cleanText };
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return { citations: [], cleanText: text };
+}

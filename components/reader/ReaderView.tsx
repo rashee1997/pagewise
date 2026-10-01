@@ -24,7 +24,9 @@ import { NotesPanel } from './NotesPanel';
 import { ExplainDialog } from './ExplainDialog';
 import { NoteDialog, NoteDraft } from './NoteDialog';
 import { CardDraftDialog } from './CardDraftDialog';
+import { AudioOverviewModal } from './AudioOverviewModal';
 import { AssistantDrawer } from '../assistant/AssistantDrawer';
+import type { CitationItem } from '../assistant/chatTypes';
 import type { Command } from '@/components/navigation/CommandPalette';
 import type { ReaderMode } from './readerModes';
 import type { ReaderActions } from './readerActions';
@@ -65,6 +67,7 @@ export function ReaderView({
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [isOutlineOpen, setIsOutlineOpen] = useState(false);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [isAudioOverviewOpen, setIsAudioOverviewOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState<NoteDraft | null>(null);
   const articleRef = useRef<HTMLDivElement>(null);
 
@@ -97,6 +100,32 @@ export function ReaderView({
     window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   };
 
+  // ---- Grounded Source Citation Jump & Pulse ----
+  const handleCitationClick = (citation: CitationItem) => {
+    setActiveMode('read');
+    setTimeout(() => {
+      let targetEl: HTMLElement | null = null;
+      if (typeof citation.approximateParagraph === 'number') {
+        targetEl = articleRef.current?.querySelector(`[data-paragraph-index="${citation.approximateParagraph}"]`) as HTMLElement | null;
+      }
+      if (!targetEl && citation.quote) {
+        const quoteSub = citation.quote.slice(0, 35).toLowerCase();
+        const paragraphsList = Array.from(articleRef.current?.querySelectorAll('p') || []);
+        targetEl = (paragraphsList.find(p => p.textContent?.toLowerCase().includes(quoteSub)) as HTMLElement) || null;
+      }
+      if (targetEl) {
+        targetEl.scrollIntoView({
+          behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+          block: 'center',
+        });
+        targetEl.classList.add('ring-2', 'ring-amber-500', 'bg-amber-100/70', 'dark:bg-amber-950/70', 'rounded-lg', 'transition-all');
+        setTimeout(() => {
+          targetEl?.classList.remove('ring-2', 'ring-amber-500', 'bg-amber-100/70', 'dark:bg-amber-950/70');
+        }, 2500);
+      }
+    }, 120);
+  };
+
   // ---- Selection actions (each consumes the native selection) ----
   const explain = (t: string) => {
     clearSelection();
@@ -116,7 +145,9 @@ export function ReaderView({
   };
   const startCard = (t: string) => {
     clearSelection();
-    startCardDraft(t);
+    const cleanT = normalizeQuote(t);
+    const pIdx = paragraphs.findIndex(p => p.includes(cleanT) || cleanT.includes(p.slice(0, 40)));
+    startCardDraft(t, pIdx >= 0 ? pIdx : undefined);
   };
 
   const submitNote = async () => {
@@ -210,6 +241,7 @@ export function ReaderView({
           onClosePreferences={() => setIsPreferencesOpen(false)}
           onEnterFocus={() => setIsFocusMode(true)}
           onToggleAssistant={() => setIsAssistantOpen(o => !o)}
+          onOpenAudioOverview={() => setIsAudioOverviewOpen(true)}
         />
       )}
 
@@ -317,6 +349,15 @@ export function ReaderView({
         dueCardsCount={dueCardsCount}
         seedPrompt={assistantSeed}
         onSeedConsumed={onAssistantSeedConsumed}
+        onCitationClick={handleCitationClick}
+      />
+
+      <AudioOverviewModal
+        isOpen={isAudioOverviewOpen}
+        onClose={() => setIsAudioOverviewOpen(false)}
+        book={book}
+        chapter={activeChapter}
+        settings={settings}
       />
     </div>
   );

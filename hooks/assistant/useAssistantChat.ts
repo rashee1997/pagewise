@@ -3,7 +3,7 @@ import { AppSettings, Book, Chapter, FlashCard } from '@/lib/db/types';
 import { saveCards } from '@/lib/db';
 import { createInitialFsrsState } from '@/lib/study/fsrs';
 import { generateFingerprint } from '@/lib/study/dedupe';
-import { extractCard, extractQuizJson } from '@/lib/ai/chatParsing';
+import { extractCard, extractQuizJson, extractCitations } from '@/lib/ai/chatParsing';
 import type { ChatMessage } from '@/components/assistant/chatTypes';
 
 /** Conversation state for the reading assistant: sending messages, parsing structured replies, saving cards. */
@@ -63,12 +63,15 @@ export function useAssistantChat(
 
       const cardMatch = extractCard(modelReply);
 
+      // Extract citations first
+      const { citations, cleanText: textAfterCitations } = extractCitations(modelReply);
+
       let quizMatch: any = undefined;
-      let cleanText = modelReply;
-      const quiz = extractQuizJson(modelReply);
+      let cleanText = textAfterCitations;
+      const quiz = extractQuizJson(textAfterCitations);
       if (quiz) {
         quizMatch = quiz.value;
-        cleanText = modelReply.replace(quiz.raw, '').replace(/```(?:json)?\s*```/g, '').trim();
+        cleanText = textAfterCitations.replace(quiz.raw, '').replace(/```(?:json)?\s*```/g, '').trim();
         if (!cleanText) cleanText = 'Here is a quick quiz to test your recall:';
       }
 
@@ -77,6 +80,7 @@ export function useAssistantChat(
         role: 'model',
         text: cleanText,
         timestamp: Date.now(),
+        citations: citations.length > 0 ? citations : undefined,
         generatedCard: cardMatch,
         generatedQuiz: quizMatch,
       };

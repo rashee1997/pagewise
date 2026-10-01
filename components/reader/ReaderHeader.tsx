@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
   Volume2,
   FileType,
+  Headphones,
 } from 'lucide-react';
 import { AppSettings, Book, Chapter } from '@/lib/db/types';
 import { ModeTabs } from './ModeTabs';
@@ -45,6 +46,7 @@ interface ReaderHeaderProps {
   onClosePreferences: () => void;
   onEnterFocus: () => void;
   onToggleAssistant: () => void;
+  onOpenAudioOverview?: () => void;
 }
 
 /** Sticky reader chrome: progress, chapter picker, study-mode tabs and tools (collapsed into a menu on phones). */
@@ -53,6 +55,11 @@ export function ReaderHeader(p: ReaderHeaderProps) {
   const [showMobileTts, setShowMobileTts] = useState(false);
 
   const toolsMenuItems: ToolsMenuItem[] = [
+    {
+      label: 'Audio briefing (Podcast)',
+      icon: <Headphones className="w-4 h-4 text-amber-600 dark:text-amber-400" />,
+      run: () => p.onOpenAudioOverview?.(),
+    },
     {
       label: `Highlights & notes${p.chapterNotesCount ? ` (${p.chapterNotesCount})` : ''}`,
       icon: <StickyNote className="w-4 h-4" />,
@@ -143,6 +150,15 @@ export function ReaderHeader(p: ReaderHeaderProps) {
                 {p.isViewingOriginalPdf ? 'Clean text' : 'Original PDF'}
               </button>
             )}
+            {/* Audio Overview (NotebookLM Podcast Briefing) */}
+            <button
+              onClick={p.onOpenAudioOverview}
+              aria-label="Chapter audio overview podcast"
+              title="Audio briefing (Two-host podcast)"
+              className={iconBtn}
+            >
+              <Headphones className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            </button>
             <TtsPlayer textToRead={p.activeChapter.text} chapterTitle={p.activeChapter.title} />
             <button
               onClick={p.onTogglePreferences}

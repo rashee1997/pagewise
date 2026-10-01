@@ -52,10 +52,17 @@ export function TodayView({
   }, [goalMinutes, todayMinutes]);
 
   const chapterNumber = (activeBook?.progress.chapterIndex ?? 0) + 1;
+  const readingEstMinutes = Math.max(5, Math.min(25, minutesLeft > 0 ? minutesLeft : 15));
+  const totalEstMinutes = (dueCardsCount > 0 ? reviewMinutes : 0) + (activeBook ? readingEstMinutes : 0);
 
-  // One obvious next action
+  // One obvious next action with unified study flow
   const primary = dueCardsCount > 0
-    ? { label: `Review ${dueCardsCount} ${dueCardsCount === 1 ? 'card' : 'cards'}`, run: onStartReview }
+    ? {
+        label: activeBook
+          ? `Start Today’s Plan (~${totalEstMinutes} min)`
+          : `Review ${dueCardsCount} ${dueCardsCount === 1 ? 'card' : 'cards'}`,
+        run: onStartReview,
+      }
     : activeBook
     ? { label: 'Resume reading', run: () => onOpenBook(activeBook.id) }
     : { label: 'Add your first book', run: onOpenUpload };
@@ -63,19 +70,28 @@ export function TodayView({
   const planSteps = [
     {
       done: dueCardsCount === 0,
-      title: dueCardsCount === 0 ? 'No cards due — you’re caught up' : `Review ${dueCardsCount} due ${dueCardsCount === 1 ? 'card' : 'cards'}`,
-      detail: dueCardsCount === 0 ? undefined : `≈ ${reviewMinutes} min`,
-      action: dueCardsCount > 0 ? { label: 'Start', run: onStartReview } : undefined,
+      badge: 'Step 1 · Recall',
+      title: dueCardsCount === 0 ? 'Spaced repetition — cards caught up' : `Review ${dueCardsCount} due ${dueCardsCount === 1 ? 'card' : 'cards'}`,
+      detail: dueCardsCount === 0 ? undefined : `≈ ${reviewMinutes} min (FSRS v5 scheduler)`,
+      action: dueCardsCount > 0 ? { label: 'Review', run: onStartReview } : undefined,
     },
     {
       done: goalMet,
-      title: activeBook ? `Read ${activeBook.title}` : 'Pick a book to read',
+      badge: 'Step 2 · Read',
+      title: activeBook ? `Read “${activeBook.title}”` : 'Pick a book to read',
       detail: activeBook
         ? goalMet
-          ? 'Daily goal met'
-          : `Chapter ${chapterNumber} · ${minutesLeft} min left to reach your goal`
+          ? `Chapter ${chapterNumber} · Daily goal met`
+          : `Chapter ${chapterNumber} · ${minutesLeft} min to reach daily goal`
         : undefined,
       action: activeBook ? { label: 'Resume', run: () => onOpenBook(activeBook.id) } : { label: 'Add book', run: onOpenUpload },
+    },
+    {
+      done: false,
+      badge: 'Step 3 · Consolidate',
+      title: 'Chapter Review & Synthesis',
+      detail: activeBook ? 'Take a quick chapter quiz, generate flashcards, or listen to the 2-host audio briefing' : 'Reflect and cement key takeaways',
+      action: activeBook ? { label: 'Open', run: () => onOpenBook(activeBook.id) } : undefined,
     },
   ];
 
@@ -124,8 +140,15 @@ export function TodayView({
                 ) : (
                   <Circle className="w-5 h-5 mt-0.5 text-stone-400 dark:text-stone-500 shrink-0" aria-label="To do" />
                 )}
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-stone-900 dark:text-stone-100 truncate">{step.title}</p>
+                <div className="min-w-0 space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    {step.badge && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 shrink-0">
+                        {step.badge}
+                      </span>
+                    )}
+                    <p className="text-sm font-medium text-stone-900 dark:text-stone-100 truncate">{step.title}</p>
+                  </div>
                   {step.detail && <p className="text-xs text-stone-600 dark:text-stone-400">{step.detail}</p>}
                 </div>
               </div>

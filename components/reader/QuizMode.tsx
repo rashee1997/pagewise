@@ -134,6 +134,25 @@ export function QuizMode({ book, chapter, settings }: QuizModeProps) {
     setAddedCards(prev => ({ ...prev, [questionIndex]: true }));
   };
 
+  const handleAddAllMissedCards = async () => {
+    if (!questions) return;
+    const missed = questions
+      .map((q, idx) => ({ q, idx }))
+      .filter(({ q, idx }) => selectedAnswers[idx] !== undefined && selectedAnswers[idx] !== q.correctAnswerIndex && !addedCards[idx]);
+    if (missed.length === 0) return;
+
+    const newCards = missed.map(({ q }) => createQuizCard(book.id, chapter.id, chapter.title, q));
+    await saveCards(newCards);
+
+    setAddedCards(prev => {
+      const next = { ...prev };
+      missed.forEach(({ idx }) => {
+        next[idx] = true;
+      });
+      return next;
+    });
+  };
+
   const handleResetQuiz = () => {
     setSelectedAnswers({});
   };
@@ -200,25 +219,53 @@ export function QuizMode({ book, chapter, settings }: QuizModeProps) {
       )}
 
       {/* Score Banner when completed */}
-      {questions && answeredCount === totalQuestions && totalQuestions > 0 && (
-        <div className="p-5 bg-stone-100 dark:bg-stone-800/80 rounded-2xl border border-stone-200 dark:border-stone-700 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
-              <Award className="w-6 h-6" />
+      {questions && answeredCount === totalQuestions && totalQuestions > 0 && (() => {
+        const missedUnsaved = questions.filter(
+          (q, qIdx) => selectedAnswers[qIdx] !== undefined && selectedAnswers[qIdx] !== q.correctAnswerIndex && !addedCards[qIdx]
+        );
+        const totalMissed = questions.filter(
+          (q, qIdx) => selectedAnswers[qIdx] !== undefined && selectedAnswers[qIdx] !== q.correctAnswerIndex
+        ).length;
+
+        return (
+          <div className="p-5 bg-stone-100 dark:bg-stone-800/80 rounded-2xl border border-stone-200 dark:border-stone-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <Award className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-stone-900 dark:text-stone-100">
+                  Quiz Complete: {correctCount} of {totalQuestions} correct ({Math.round((correctCount / totalQuestions) * 100)}%)
+                </h3>
+                <p className="text-xs text-stone-600 dark:text-stone-400">
+                  {correctCount === totalQuestions
+                    ? 'Flawless recall! You have mastered this chapter.'
+                    : 'Review the detailed explanations below to cement any weak points.'}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base font-bold text-stone-900 dark:text-stone-100">
-                Quiz Complete: {correctCount} of {totalQuestions} correct ({Math.round((correctCount / totalQuestions) * 100)}%)
-              </h3>
-              <p className="text-xs text-stone-600 dark:text-stone-400">
-                {correctCount === totalQuestions
-                  ? 'Flawless recall! You have mastered this chapter.'
-                  : 'Review the detailed explanations below to cement any weak points.'}
-              </p>
-            </div>
+
+            {totalMissed > 0 && (
+              <div className="shrink-0 flex items-center gap-2">
+                {missedUnsaved.length > 0 ? (
+                  <button
+                    onClick={handleAddAllMissedCards}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-stone-900 hover:bg-stone-800 text-stone-50 dark:bg-stone-100 dark:hover:bg-white dark:text-stone-950 font-semibold text-xs rounded-xl shadow-2xs transition-all cursor-pointer"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5 text-amber-400 dark:text-amber-600" />
+                    <span>Save All Missed to Deck ({missedUnsaved.length})</span>
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 font-semibold rounded-xl">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>All Missed Questions Saved</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {isLoading && (
         <div className="space-y-4 animate-pulse">

@@ -7,6 +7,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { useAssistantChat } from '@/hooks/assistant/useAssistantChat';
 import { AssistantEmptyState } from './AssistantEmptyState';
 import { ChatMessageList } from './ChatMessageList';
+import type { CitationItem } from './chatTypes';
 
 interface AssistantDrawerProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ interface AssistantDrawerProps {
   /** Text to send automatically when opened (e.g. from the command menu) */
   seedPrompt?: string | null;
   onSeedConsumed?: () => void;
+  onCitationClick?: (citation: CitationItem) => void;
 }
 
 export function AssistantDrawer({
@@ -32,6 +34,7 @@ export function AssistantDrawer({
   settings,
   seedPrompt,
   onSeedConsumed,
+  onCitationClick,
 }: AssistantDrawerProps) {
   const { messages, setMessages, input, setInput, isLoading, handleSendMessage, handleAddCardToDeck } = useAssistantChat(
     book,
@@ -165,7 +168,7 @@ export function AssistantDrawer({
           {messages.length === 0 ? (
             <AssistantEmptyState selectedText={selectedText} onSend={handleSendMessage} />
           ) : (
-            <ChatMessageList messages={messages} onAddCard={handleAddCardToDeck} />
+            <ChatMessageList messages={messages} onAddCard={handleAddCardToDeck} onCitationClick={onCitationClick} />
           )}
 
           {isLoading && (

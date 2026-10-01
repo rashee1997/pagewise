@@ -184,6 +184,32 @@ ${existingKeyNotice}`;
 - "context": why this lesson matters in the chapter context
 - "actionableStep": how the reader can apply this lesson in life or work`;
       prompt = `Book: "${bookTitle || 'Untitled'}"\nChapter: "${chapterTitle || 'Chapter'}"\n\nChapter Content:\n${safeChapterText}\n\nExtract 4-8 core structured lessons from this chapter in JSON array format.`;
+    } else if (kind === 'audioOverview') {
+      responseMimeType = 'application/json';
+      systemInstruction += ` You are producing an engaging, high-yield two-host podcast episode called "Pagewise Audio Briefing".
+There are two hosts:
+- "Alex (The Guide)" [speaker: "guide"]: Articulate host who frames the core themes, asks provocative questions, summarizes main points, and guides the discussion.
+- "Morgan (The Analyst)" [speaker: "analyst"]: Sharp, insightful analyst who explains nuances, provides vivid analogies, critiques arguments, and explains practical takeaways.
+The dialogue must sound natural, conversational, and educational with zero filler.
+Output strictly JSON matching this structure:
+{
+  "title": "Compelling Episode Title",
+  "durationEstimate": "3-5 min",
+  "turns": [
+    {
+      "speaker": "guide",
+      "speakerName": "Alex (The Guide)",
+      "text": "..."
+    },
+    {
+      "speaker": "analyst",
+      "speakerName": "Morgan (The Analyst)",
+      "text": "..."
+    }
+  ]
+}
+Generate between 6 and 14 dialogue turns.`;
+      prompt = `Book: "${bookTitle || 'Book'}" by ${author || 'Unknown'}\nChapter: "${chapterTitle || 'Chapter'}"\n\nChapter Content:\n${safeChapterText}\n\nProduce the complete two-host conversational podcast episode in the specified JSON format.`;
     } else if (kind === 'explain_selection') {
       systemInstruction += ` You explain complex passages clearly. Be direct, insightful, and accessible. Use markdown formatting.`;
       prompt = `In the book "${bookTitle || 'Book'}" (${chapterTitle || ''}), the reader highlighted this passage:\n\n> "${selectedText}"\n\nContext around it in chapter:\n${safeChapterText.slice(0, 3000)}\n\nExplain what this passage means, its significance, and underlying implications in 2-3 clear paragraphs.`;
@@ -194,7 +220,17 @@ ${existingKeyNotice}`;
 2. Plain language breakdown
 3. A real-world analogy`;
     } else if (kind === 'chat_assistant') {
-      systemInstruction += ` You are the Pagewise Reading Assistant. You are reading alongside the user. You have full context of the active book, chapter, and any highlighted text. Answer queries concisely and thoughtfully using markdown formatting. When the user asks for a quiz question, include a JSON object block with keys "question", "options" (array of 4 choices), "correctAnswerIndex" (0-3), and "explanation".`;
+      systemInstruction += ` You are the Pagewise Reading Assistant. You are reading alongside the user. You have full context of the active book, chapter, and any highlighted text. Answer queries concisely and thoughtfully using markdown formatting.
+GROUNDING & SOURCE CITATIONS:
+Whenever your answer references specific claims, principles, definitions, or facts from the chapter, ground them in the text.
+At the end of your response, output a structured citations block formatted as:
+\`\`\`json-citations
+[
+  { "index": 1, "quote": "exact sentence or clause from text", "snippet": "brief context" }
+]
+\`\`\`
+When the user asks for a quiz question, include a JSON object block with keys "question", "options" (array of 4 choices), "correctAnswerIndex" (0-3), and "explanation".
+When the user asks for a flashcard, include Q: [question] and A: [answer].`;
       const contextPill = `Current Book: "${bookTitle || 'Unknown'}" by ${author || 'Unknown'}\nActive Chapter: "${chapterTitle || 'Current'}"\n${selectedText ? `User Highlighted Text: "${selectedText}"\n` : ''}`;
       const historyFormatted = chatHistory
         .map(h => `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.text}`)

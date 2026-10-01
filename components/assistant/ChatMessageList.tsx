@@ -2,16 +2,17 @@
 
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Layers, PlusCircle, CheckCircle2 } from 'lucide-react';
+import { Layers, PlusCircle, CheckCircle2, Quote, ArrowUpRight } from 'lucide-react';
 import { ChatQuizWidget } from './ChatQuizWidget';
-import type { ChatMessage } from './chatTypes';
+import type { ChatMessage, CitationItem } from './chatTypes';
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
   onAddCard: (msgId: string, card: { front: string; back: string; conceptKey: string }) => void;
+  onCitationClick?: (citation: CitationItem) => void;
 }
 
-export function ChatMessageList({ messages, onAddCard }: ChatMessageListProps) {
+export function ChatMessageList({ messages, onAddCard, onCitationClick }: ChatMessageListProps) {
   const handleAddCardToDeck = onAddCard;
   return (
     <>
@@ -37,6 +38,32 @@ export function ChatMessageList({ messages, onAddCard }: ChatMessageListProps) {
                       </div>
                     )}
                   </div>
+
+                  {/* Render Grounded Source Citations (Clickable NotebookLM-style citations) */}
+                  {!isUser && m.citations && m.citations.length > 0 && (
+                    <div className="max-w-[85%] p-2.5 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 rounded-xl text-xs space-y-1.5 mt-1">
+                      <div className="font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5 text-xs">
+                        <Quote className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                        <span>Source Citations ({m.citations.length})</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        {m.citations.map(c => (
+                          <button
+                            key={c.index}
+                            onClick={() => onCitationClick?.(c)}
+                            title={`Jump to quote: "${c.quote}"`}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-stone-900 hover:bg-amber-100/80 dark:hover:bg-amber-900/50 border border-amber-300/80 dark:border-amber-800/80 rounded-lg text-xs font-medium text-stone-800 dark:text-stone-200 shadow-2xs transition-all cursor-pointer group text-left"
+                          >
+                            <span className="w-4 h-4 rounded-full bg-amber-200 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200 text-[10px] font-bold flex items-center justify-center shrink-0">
+                              {c.index}
+                            </span>
+                            <span className="truncate max-w-44 line-clamp-1">&ldquo;{c.quote}&rdquo;</span>
+                            <ArrowUpRight className="w-3 h-3 text-stone-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 shrink-0" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Render Interactive Quiz Widget GUI if detected */}
                   {!isUser && m.generatedQuiz && <ChatQuizWidget quiz={m.generatedQuiz} />}

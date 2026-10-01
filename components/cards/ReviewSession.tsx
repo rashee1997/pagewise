@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { FlashCard } from '@/lib/db/types';
 import { calculateNextState, previewNextIntervals } from '@/lib/study/fsrs';
 import { updateCardReview } from '@/lib/db';
-import { X, HelpCircle, Check, Award, ArrowRight, RotateCw, RotateCcw } from 'lucide-react';
+import { X, HelpCircle, Check, Award, ArrowRight, RotateCw, RotateCcw, BookOpen, Quote } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Dialog } from '@/components/ui/Dialog';
 import { FsrsState } from '@/lib/db/types';
@@ -264,13 +264,28 @@ export function ReviewSession({ cards, onComplete, onExit }: ReviewSessionProps)
 
           {/* Back Target (Answer) */}
           {showAnswer ? (
-            <div className="pt-6 border-t border-stone-100 dark:border-stone-800 animate-in fade-in duration-150 space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-400 block">
-                Answer & Key Reasoning
-              </span>
-              <p className="text-base md:text-lg text-stone-800 dark:text-stone-200 whitespace-pre-line leading-relaxed">
-                {currentCard.back}
-              </p>
+            <div className="pt-6 border-t border-stone-100 dark:border-stone-800 animate-in fade-in duration-150 space-y-3">
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-400 block mb-1">
+                  Answer & Key Reasoning
+                </span>
+                <p className="text-base md:text-lg text-stone-800 dark:text-stone-200 whitespace-pre-line leading-relaxed">
+                  {currentCard.back}
+                </p>
+              </div>
+
+              {/* Source Passage Anchor (RemNote-style context link) */}
+              {currentCard.sourceAnchor?.quoteSnippet && (
+                <div className="p-3 bg-stone-50 dark:bg-stone-800/60 rounded-xl border border-stone-200/80 dark:border-stone-700/80 text-xs space-y-1">
+                  <div className="flex items-center gap-1.5 font-semibold text-stone-700 dark:text-stone-300">
+                    <Quote className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span>Original Source ({currentCard.chapterTitle || 'Chapter'})</span>
+                  </div>
+                  <p className="text-xs italic text-stone-600 dark:text-stone-300 line-clamp-3">
+                    &ldquo;{currentCard.sourceAnchor.quoteSnippet}&rdquo;
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center text-xs text-stone-600 dark:text-stone-400 pt-4 border-t border-stone-100 dark:border-stone-800/80">

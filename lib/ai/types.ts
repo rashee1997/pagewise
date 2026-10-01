@@ -7,6 +7,7 @@ export type AiTaskKind =
   | 'cards'
   | 'quiz'
   | 'glossary'
+  | 'audioOverview'
   | 'explain_selection'
   | 'simplify_selection'
   | 'chat_assistant'
@@ -60,4 +61,16 @@ export interface GlossaryOutput {
   term: string;
   definition: string;
   contextUsage?: string;
+}
+
+export interface AudioOverviewTurn {
+  speaker: 'guide' | 'analyst';
+  speakerName: string;
+  text: string;
+}
+
+export interface AudioOverviewOutput {
+  title: string;
+  durationEstimate: string;
+  turns: AudioOverviewTurn[];
 }

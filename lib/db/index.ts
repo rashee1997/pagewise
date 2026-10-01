@@ -67,6 +67,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   readerFontFamily: 'serif',
   readerLineWidth: 'normal',
   ttsRate: 1.0,
+  targetRetention: 0.90,
   streakDays: 1,
   lastActiveDate: new Date().toISOString().split('T')[0],
 };
@@ -196,7 +197,7 @@ export async function getChapterMaterial<T>(chapterId: string, kind: string): Pr
 export async function saveChapterMaterial(
   bookId: string,
   chapterId: string,
-  kind: 'summary' | 'keyIdeas' | 'lessons' | 'quiz' | 'glossary',
+  kind: 'summary' | 'keyIdeas' | 'lessons' | 'quiz' | 'glossary' | 'audioOverview',
   payload: unknown
 ): Promise<void> {
   const existing = await db.chapterMaterials.where(['chapterId', 'kind']).equals([chapterId, kind]).first();

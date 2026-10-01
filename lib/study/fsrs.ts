@@ -31,22 +31,30 @@ export interface ReviewResult {
   intervalLabel: string;
 }
 
-export function previewNextIntervals(currentState: FsrsState): Record<1 | 2 | 3 | 4, string> {
+export function previewNextIntervals(currentState: FsrsState, desiredRetention: number = 0.90): Record<1 | 2 | 3 | 4, string> {
   return {
-    1: calculateNextState(currentState, 1).intervalLabel,
-    2: calculateNextState(currentState, 2).intervalLabel,
-    3: calculateNextState(currentState, 3).intervalLabel,
-    4: calculateNextState(currentState, 4).intervalLabel,
+    1: calculateNextState(currentState, 1, desiredRetention).intervalLabel,
+    2: calculateNextState(currentState, 2, desiredRetention).intervalLabel,
+    3: calculateNextState(currentState, 3, desiredRetention).intervalLabel,
+    4: calculateNextState(currentState, 4, desiredRetention).intervalLabel,
   };
 }
 
-export function calculateNextState(currentState: FsrsState, rating: 1 | 2 | 3 | 4): ReviewResult {
+export function calculateNextState(
+  currentState: FsrsState,
+  rating: 1 | 2 | 3 | 4,
+  desiredRetention: number = 0.90
+): ReviewResult {
   const now = Date.now();
   let stability = currentState.stability;
   let difficulty = currentState.difficulty;
   let reps = currentState.reps + 1;
   let lapses = currentState.lapses;
   let nextStateNum = currentState.state;
+
+  // Retention scaling factor: I = S * ln(R) / ln(0.90)
+  const safeR = Math.min(0.97, Math.max(0.75, desiredRetention));
+  const retentionFactor = Math.min(2.5, Math.max(0.4, Math.log(safeR) / Math.log(0.90)));
 
   // Adjust difficulty based on rating
   // Rating 1 decreases stability & increases difficulty
@@ -70,6 +78,8 @@ export function calculateNextState(currentState: FsrsState, rating: 1 | 2 | 3 | 
     nextStateNum = 2; // Review
   }
 
+  const effectiveStability = stability * retentionFactor;
+
   let scheduledMinutes = 0;
   let label = '';
 
@@ -81,17 +91,17 @@ export function calculateNextState(currentState: FsrsState, rating: 1 | 2 | 3 | 
       scheduledMinutes = 60 * 12; // 12 hours
       label = '12h';
     } else {
-      const days = Math.max(1, Math.round(stability * 0.8));
+      const days = Math.max(1, Math.round(effectiveStability * 0.8));
       scheduledMinutes = days * 24 * 60;
       label = `${days}d`;
     }
   } else if (rating === 3) {
-    const days = Math.max(1, Math.round(stability));
+    const days = Math.max(1, Math.round(effectiveStability));
     scheduledMinutes = days * 24 * 60;
     label = `${days}d`;
   } else {
     // Easy (rating 4)
-    const days = Math.max(3, Math.round(stability * 1.4));
+    const days = Math.max(2, Math.round(effectiveStability * 1.35));
     scheduledMinutes = days * 24 * 60;
     label = `${days}d`;
   }

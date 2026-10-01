@@ -55,6 +55,13 @@ export interface FlashCard {
   bookId: string;
   chapterId: string;
   chapterTitle?: string;
+  sourceNoteId?: string;
+  sourceAnchor?: {
+    paragraphIndex?: number;
+    quoteSnippet?: string;
+    charOffsetStart?: number;
+    charOffsetEnd?: number;
+  };
   type: CardType;
   front: string;
   back: string;
@@ -71,7 +78,7 @@ export interface GenerationRecord {
   id: string;
   bookId: string;
   chapterId: string;
-  kind: 'summary' | 'keyIdeas' | 'lessons' | 'cards' | 'quiz' | 'glossary';
+  kind: 'summary' | 'keyIdeas' | 'lessons' | 'cards' | 'quiz' | 'glossary' | 'audioOverview';
   inputHash: string;
   promptVersion: string;
   batch: number;
@@ -114,12 +121,24 @@ export interface GlossaryItem {
   contextUsage?: string;
 }
 
+export interface AudioDialogueTurn {
+  speaker: 'guide' | 'analyst';
+  speakerName: string;
+  text: string;
+}
+
+export interface AudioOverviewData {
+  title: string;
+  durationEstimate: string;
+  turns: AudioDialogueTurn[];
+}
+
 export interface ChapterMaterial {
   id: string;
   chapterId: string;
   bookId: string;
-  kind: 'summary' | 'keyIdeas' | 'lessons' | 'quiz' | 'glossary';
-  payload: ChapterSummary | KeyIdea[] | Lesson[] | QuizQuestion[] | GlossaryItem[];
+  kind: 'summary' | 'keyIdeas' | 'lessons' | 'quiz' | 'glossary' | 'audioOverview';
+  payload: ChapterSummary | KeyIdea[] | Lesson[] | QuizQuestion[] | GlossaryItem[] | AudioOverviewData;
   createdAt: number;
 }
 
@@ -186,6 +205,7 @@ export interface AppSettings {
   readerLineWidth: 'narrow' | 'normal' | 'wide';
   ttsVoiceName?: string;
   ttsRate: number;
+  targetRetention?: number; // Desired retention rate (0.80 - 0.95, default 0.90)
   streakDays: number;
   lastActiveDate: string; // YYYY-MM-DD
 }
