@@ -214,9 +214,12 @@ export function AudioOverviewModal({
 
       // 2. Gemini Cloud Studio TTS (gemini-3.8-flash-tts)
       if (engine === 'gemini-cloud') {
-        const cloudVoice = isGuide
-          ? settings.audioSettings?.guideVoice || 'Aoede'
-          : settings.audioSettings?.analystVoice || 'Fenrir';
+        const VALID_GEMINI_VOICES = ['Aoede', 'Zephyr', 'Kore', 'Fenrir', 'Charon', 'Puck'];
+        const rawGuide = settings.audioSettings?.guideVoice || 'Aoede';
+        const rawAnalyst = settings.audioSettings?.analystVoice || 'Fenrir';
+        const guideValid = VALID_GEMINI_VOICES.includes(rawGuide) ? rawGuide : 'Aoede';
+        const analystValid = VALID_GEMINI_VOICES.includes(rawAnalyst) ? rawAnalyst : 'Fenrir';
+        const cloudVoice = isGuide ? guideValid : analystValid;
         const cloudModel = settings.audioSettings?.geminiTtsModel || 'gemini-3.8-flash-tts';
 
         try {

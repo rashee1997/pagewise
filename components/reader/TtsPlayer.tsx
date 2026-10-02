@@ -48,9 +48,11 @@ export function TtsPlayer({ textToRead, chapterTitle, settings }: TtsPlayerProps
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const engine: TtsEngine = settings?.audioSettings?.engine || 'local-wasm';
+  const VALID_GEMINI_VOICES = ['Aoede', 'Zephyr', 'Kore', 'Fenrir', 'Charon', 'Puck'];
+  const rawGuide = settings?.audioSettings?.guideVoice || 'Aoede';
   const voiceId =
     engine === 'gemini-cloud'
-      ? settings?.audioSettings?.guideVoice || 'Aoede'
+      ? VALID_GEMINI_VOICES.includes(rawGuide) ? rawGuide : 'Aoede'
       : settings?.audioSettings?.guideVoice || 'af_heart';
 
   const stop = useCallback(() => {
