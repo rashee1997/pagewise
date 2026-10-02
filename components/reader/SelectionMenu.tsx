@@ -60,7 +60,7 @@ export function SelectionMenu({
               transform: placeBelow ? 'translate(-50%, 28px)' : 'translate(-50%, calc(-100% - 10px))',
             }
       }
-      className={`z-50 flex items-center [--focus:#fbbf24] dark:[--focus:#1d4ed8] bg-stone-900 dark:bg-stone-100 text-stone-100 dark:text-stone-900 shadow-xl border border-stone-800 dark:border-stone-200 animate-in fade-in zoom-in-95 duration-100 ${
+      className={`z-(--z-modal) flex items-center [--focus:#fbbf24] dark:[--focus:#1d4ed8] bg-stone-900 dark:bg-stone-100 text-stone-100 dark:text-stone-900 shadow-xl border border-stone-800 dark:border-stone-200 animate-in fade-in zoom-in-95 duration-100 ${
         docked
           ? 'fixed inset-x-2 bottom-[calc(env(safe-area-inset-bottom)+4.25rem)] rounded-2xl p-1 justify-between'
           : 'rounded-xl px-1.5 py-1 gap-0.5'

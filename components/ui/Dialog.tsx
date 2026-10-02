@@ -98,7 +98,7 @@ export function Dialog({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex ${align} bg-stone-900/60 dark:bg-stone-950/80 backdrop-blur-xs animate-in fade-in duration-150`}
+      className={`fixed inset-0 z-(--z-modal) flex ${align} bg-stone-900/60 dark:bg-stone-950/80 backdrop-blur-xs animate-in fade-in duration-150`}
       onMouseDown={e => {
         if (e.target === e.currentTarget && dismissible) onClose();
       }}

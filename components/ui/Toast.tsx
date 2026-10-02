@@ -92,7 +92,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         role="status"
         aria-live="polite"
         aria-atomic="false"
-        className="pointer-events-none fixed inset-x-0 z-60 flex flex-col items-center gap-2 px-4 bottom-[calc(env(safe-area-inset-bottom)+5rem)] md:bottom-6"
+        className="pointer-events-none fixed inset-x-0 z-(--z-toast) flex flex-col items-center gap-2 px-4 bottom-[calc(env(safe-area-inset-bottom)+5rem)] md:bottom-6"
       >
         {items.map(item => (
           <ToastView key={item.id} item={item} onDismiss={dismiss} />

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAbortableRequest, isAbortError } from '@/hooks/reader/useAbortableRequest';
 import { Book, Chapter, QuizQuestion, AppSettings, FlashCard } from '@/lib/db/types';
 import { getChapterMaterial, saveChapterMaterial, saveGenerationRecord } from '@/lib/db';
 import { Sparkles, RefreshCw, CheckCircle2, XCircle, Award, AlertCircle, HelpCircle, PlusCircle } from 'lucide-react';
@@ -64,14 +65,17 @@ export function QuizMode({ book, chapter, settings }: QuizModeProps) {
     };
   }, [chapter.id]);
 
+  const nextSignal = useAbortableRequest();
   const handleGenerate = async () => {
     setIsLoading(true);
     setError(null);
     setSelectedAnswers({});
 
+    const signal = nextSignal();
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
+        signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           kind: 'quiz',
@@ -113,10 +117,11 @@ export function QuizMode({ book, chapter, settings }: QuizModeProps) {
         throw new Error('Could not parse quiz array from model response.');
       }
     } catch (err: any) {
+      if (isAbortError(err)) return;
       console.error('Error generating quiz:', err);
       setError(err?.message || 'Failed to generate quiz.');
     } finally {
-      setIsLoading(false);
+      if (!signal.aborted) setIsLoading(false);
     }
   };
 

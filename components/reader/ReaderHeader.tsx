@@ -77,7 +77,7 @@ export function ReaderHeader(p: ReaderHeaderProps) {
   ];
 
   return (
-    <header className="reader-chrome sticky top-0 z-30 backdrop-blur-md border-b">
+    <header className="reader-chrome sticky top-0 z-(--z-sticky) backdrop-blur-md border-b">
       <div
         role="progressbar"
         aria-label="Book progress"

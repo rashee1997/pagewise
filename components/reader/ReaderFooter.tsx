@@ -17,7 +17,7 @@ const navBtn =
 
 export function ReaderFooter({ currentIndex, total, percent, onPrev, onNext, onOpenOutline }: ReaderFooterProps) {
   return (
-    <footer className="reader-chrome sticky bottom-0 z-30 backdrop-blur-md border-t px-4 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+    <footer className="reader-chrome sticky bottom-0 z-(--z-sticky) backdrop-blur-md border-t px-4 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
       <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
         <button onClick={onPrev} disabled={currentIndex === 0} aria-keyshortcuts="[" className={navBtn}>
           <ChevronLeft className="w-4 h-4" aria-hidden="true" />

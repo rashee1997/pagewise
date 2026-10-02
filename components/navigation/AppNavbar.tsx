@@ -164,7 +164,7 @@ export function AppNavbar({
       </aside>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav aria-label="Primary" className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-stone-50/95 dark:bg-stone-950/95 backdrop-blur-md border-t border-stone-200 dark:border-stone-800 px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] flex items-center justify-around">
+      <nav aria-label="Primary" className="md:hidden fixed bottom-0 left-0 right-0 z-(--z-popover) bg-stone-50/95 dark:bg-stone-950/95 backdrop-blur-md border-t border-stone-200 dark:border-stone-800 px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] flex items-center justify-around">
         {navItems.map(item => {
           const isActive = activeTab === item.id;
           return (

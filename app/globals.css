@@ -3,6 +3,15 @@
 /* `.force-light` opts a subtree out of dark mode (e.g. the sepia reader theme) */
 @custom-variant dark (&:where(.dark, .dark *):not(:where(.force-light, .force-light *)));
 
+/* Stacking scale: content < sticky chrome < nav/popovers < modals < toasts < skip-link */
+:root {
+  --z-sticky: 30;
+  --z-popover: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+  --z-skip: 70;
+}
+
 @layer base {
   ::selection {
     background-color: #fef08a;

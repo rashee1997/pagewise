@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAbortableRequest, isAbortError } from '@/hooks/reader/useAbortableRequest';
 import { Book, Chapter, Lesson, AppSettings } from '@/lib/db/types';
 import { getChapterMaterial, saveChapterMaterial, saveGenerationRecord } from '@/lib/db';
 import { Sparkles, RefreshCw, Compass, Plus, Trash2, CheckCircle2, AlertCircle, BookOpen, Edit3, X } from 'lucide-react';
@@ -39,13 +40,16 @@ export function LessonsMode({ book, chapter, settings }: LessonsModeProps) {
     };
   }, [chapter.id]);
 
+  const nextSignal = useAbortableRequest();
   const handleGenerateAiLessons = async () => {
     setIsLoading(true);
     setError(null);
 
+    const signal = nextSignal();
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
+        signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           kind: 'lessons',
@@ -92,10 +96,11 @@ export function LessonsMode({ book, chapter, settings }: LessonsModeProps) {
         throw new Error('Could not parse lessons from model response.');
       }
     } catch (err: any) {
+      if (isAbortError(err)) return;
       console.error('Error generating lessons:', err);
       setError(err?.message || 'Failed to extract lessons with AI.');
     } finally {
-      setIsLoading(false);
+      if (!signal.aborted) setIsLoading(false);
     }
   };
 
@@ -277,7 +282,7 @@ export function LessonsMode({ book, chapter, settings }: LessonsModeProps) {
 
       {/* Manual Lesson Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 dark:bg-stone-950/80 backdrop-blur-xs animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-(--z-modal) flex items-center justify-center p-4 bg-stone-900/60 dark:bg-stone-950/80 backdrop-blur-xs animate-in fade-in duration-150">
           <div
             className="w-full max-w-lg bg-white dark:bg-stone-900 rounded-2xl shadow-xl border border-stone-200 dark:border-stone-800 overflow-hidden p-6 space-y-5"
             onClick={e => e.stopPropagation()}

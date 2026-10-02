@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAbortableRequest, isAbortError } from '@/hooks/reader/useAbortableRequest';
 import { Book, Chapter, KeyIdea, AppSettings } from '@/lib/db/types';
 import { getChapterMaterial, saveChapterMaterial, saveGenerationRecord } from '@/lib/db';
 import { Sparkles, RefreshCw, Lightbulb, Quote, Compass, AlertCircle } from 'lucide-react';
@@ -32,13 +33,16 @@ export function KeyIdeasMode({ book, chapter, settings }: KeyIdeasModeProps) {
     };
   }, [chapter.id]);
 
+  const nextSignal = useAbortableRequest();
   const handleGenerate = async () => {
     setIsLoading(true);
     setError(null);
 
+    const signal = nextSignal();
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
+        signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           kind: 'keyIdeas',
@@ -73,10 +77,11 @@ export function KeyIdeasMode({ book, chapter, settings }: KeyIdeasModeProps) {
         throw new Error('Could not parse ideas array from model.');
       }
     } catch (err: any) {
+      if (isAbortError(err)) return;
       console.error('Error generating key ideas:', err);
       setError(err?.message || 'Failed to extract key ideas.');
     } finally {
-      setIsLoading(false);
+      if (!signal.aborted) setIsLoading(false);
     }
   };
 

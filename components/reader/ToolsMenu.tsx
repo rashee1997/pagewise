@@ -48,7 +48,7 @@ export function ToolsMenu({
       role="menu"
       aria-label="Reader tools"
       onKeyDown={onKeyDown}
-      className="absolute right-0 top-full mt-1 w-56 z-40 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 border border-stone-200 dark:border-stone-800 rounded-xl shadow-xl p-1"
+      className="absolute right-0 top-full mt-1 w-56 z-(--z-popover) bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 border border-stone-200 dark:border-stone-800 rounded-xl shadow-xl p-1"
     >
       {visible.map(item => (
         <button

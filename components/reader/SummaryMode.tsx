@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAbortableRequest, isAbortError } from '@/hooks/reader/useAbortableRequest';
 import { Book, Chapter, ChapterSummary, AppSettings } from '@/lib/db/types';
 import { getChapterMaterial, saveChapterMaterial, saveGenerationRecord } from '@/lib/db';
 import { Sparkles, RefreshCw, CheckCircle2, ListOrdered, BookOpen, AlertCircle } from 'lucide-react';
@@ -32,13 +33,16 @@ export function SummaryMode({ book, chapter, settings }: SummaryModeProps) {
     };
   }, [chapter.id]);
 
+  const nextSignal = useAbortableRequest();
   const handleGenerateSummary = async () => {
     setIsLoading(true);
     setError(null);
 
+    const signal = nextSignal();
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
+        signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           kind: 'summary',
@@ -73,10 +77,11 @@ export function SummaryMode({ book, chapter, settings }: SummaryModeProps) {
         throw new Error('Could not parse summary data from model.');
       }
     } catch (err: any) {
+      if (isAbortError(err)) return;
       console.error('Error generating summary:', err);
       setError(err?.message || 'Failed to generate summary. Please check your AI connection in Settings.');
     } finally {
-      setIsLoading(false);
+      if (!signal.aborted) setIsLoading(false);
     }
   };
 

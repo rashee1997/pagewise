@@ -294,7 +294,7 @@ export function NoteDialog({
                 </button>
 
                 {aiMenuOpen && (
-                  <div className="absolute left-0 bottom-full mb-2 w-56 bg-white dark:bg-stone-800 rounded-xl shadow-xl border border-stone-200 dark:border-stone-700 py-1.5 z-50 text-xs space-y-0.5 animate-in fade-in-50 zoom-in-95">
+                  <div className="absolute left-0 bottom-full mb-2 w-56 bg-white dark:bg-stone-800 rounded-xl shadow-xl border border-stone-200 dark:border-stone-700 py-1.5 z-(--z-modal) text-xs space-y-0.5 animate-in fade-in-50 zoom-in-95">
                     <button
                       type="button"
                       onClick={() => runAiAction('Summarize and condense this note clearly with key takeaways.')}

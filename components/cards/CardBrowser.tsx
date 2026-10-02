@@ -191,7 +191,7 @@ export function CardBrowser({ cards, books, onRefreshCards }: CardBrowserProps) 
       {isAddModalOpen && (
         <div
           onClick={() => setIsAddModalOpen(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 dark:bg-stone-950/80 backdrop-blur-2xs"
+          className="fixed inset-0 z-(--z-modal) flex items-center justify-center p-4 bg-stone-900/60 dark:bg-stone-950/80 backdrop-blur-2xs"
         >
           <form
             onSubmit={handleCreateCard}

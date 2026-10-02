@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAbortableRequest, isAbortError } from '@/hooks/reader/useAbortableRequest';
 import { Book, Chapter, GlossaryItem, AppSettings } from '@/lib/db/types';
 import { getChapterMaterial, saveChapterMaterial, saveGenerationRecord } from '@/lib/db';
 import { Sparkles, RefreshCw, BookMarked, AlertCircle } from 'lucide-react';
@@ -32,13 +33,16 @@ export function GlossaryMode({ book, chapter, settings }: GlossaryModeProps) {
     };
   }, [chapter.id]);
 
+  const nextSignal = useAbortableRequest();
   const handleGenerate = async () => {
     setIsLoading(true);
     setError(null);
 
+    const signal = nextSignal();
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
+        signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           kind: 'glossary',
@@ -73,10 +77,11 @@ export function GlossaryMode({ book, chapter, settings }: GlossaryModeProps) {
         throw new Error('Could not parse glossary array from model.');
       }
     } catch (err: any) {
+      if (isAbortError(err)) return;
       console.error('Error generating glossary:', err);
       setError(err?.message || 'Failed to extract glossary.');
     } finally {
-      setIsLoading(false);
+      if (!signal.aborted) setIsLoading(false);
     }
   };
 

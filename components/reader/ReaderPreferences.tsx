@@ -33,7 +33,7 @@ export function ReaderPreferences({
       role="group"
       aria-label="Reading appearance"
       onClick={e => e.stopPropagation()}
-      className="absolute top-14 right-4 z-40 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-stone-900 rounded-2xl shadow-xl border border-stone-200 dark:border-stone-800 p-4 space-y-4 animate-in fade-in zoom-in-95 duration-100 text-xs"
+      className="absolute top-14 right-4 z-(--z-popover) w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-stone-900 rounded-2xl shadow-xl border border-stone-200 dark:border-stone-800 p-4 space-y-4 animate-in fade-in zoom-in-95 duration-100 text-xs"
     >
       <div className="flex items-center justify-between pb-2 border-b border-stone-100 dark:border-stone-800">
         <span className="font-semibold text-stone-900 dark:text-stone-100">

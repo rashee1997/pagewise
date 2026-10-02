@@ -217,7 +217,7 @@ export function ReaderView({
     >
       <a
         href="#reader-panel"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-70 focus:px-3 focus:py-2 focus:rounded-lg focus:bg-white focus:text-stone-900 focus:shadow-lg"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-(--z-skip) focus:px-3 focus:py-2 focus:rounded-lg focus:bg-white focus:text-stone-900 focus:shadow-lg"
       >
         Skip to content
       </a>
@@ -254,7 +254,7 @@ export function ReaderView({
         <button
           type="button"
           onClick={() => setIsFocusMode(false)}
-          className="fixed top-4 right-4 z-40 [--focus:#fbbf24] bg-stone-900/90 hover:bg-stone-900 text-stone-100 rounded-full shadow-lg backdrop-blur-xs inline-flex items-center gap-1.5 text-xs px-4 min-h-10 cursor-pointer focus-visible:ring-2 focus-visible:ring-amber-500"
+          className="fixed top-4 right-4 z-(--z-popover) [--focus:#fbbf24] bg-stone-900/90 hover:bg-stone-900 text-stone-100 rounded-full shadow-lg backdrop-blur-xs inline-flex items-center gap-1.5 text-xs px-4 min-h-10 cursor-pointer focus-visible:ring-2 focus-visible:ring-amber-500"
         >
           <Minimize2 className="w-3.5 h-3.5" aria-hidden="true" />
           <span>Exit focus mode (Esc)</span>

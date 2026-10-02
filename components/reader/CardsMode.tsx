@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAbortableRequest, isAbortError } from '@/hooks/reader/useAbortableRequest';
 import { Book, Chapter, FlashCard, AppSettings } from '@/lib/db/types';
 import { getAllCards, saveCards, deleteCard, saveGenerationRecord } from '@/lib/db';
 import { filterDuplicateCards, generateFingerprint } from '@/lib/study/dedupe';
@@ -35,16 +36,19 @@ export function CardsMode({ book, chapter, settings }: CardsModeProps) {
     };
   }, [book.id, chapter.id]);
 
+  const nextSignal = useAbortableRequest();
   const handleGenerateCards = async () => {
     setIsLoading(true);
     setError(null);
     setNotice(null);
 
+    const signal = nextSignal();
     try {
       const existingConceptKeys = cards.map(c => c.conceptKey).filter(Boolean);
 
       const res = await fetch('/api/generate', {
         method: 'POST',
+        signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           kind: 'cards',
@@ -112,10 +116,11 @@ export function CardsMode({ book, chapter, settings }: CardsModeProps) {
         throw new Error('Could not parse cards array from model response.');
       }
     } catch (err: any) {
+      if (isAbortError(err)) return;
       console.error('Error generating cards:', err);
       setError(err?.message || 'Failed to generate cards.');
     } finally {
-      setIsLoading(false);
+      if (!signal.aborted) setIsLoading(false);
     }
   };
 
