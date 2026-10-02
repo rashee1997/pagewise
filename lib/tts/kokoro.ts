@@ -17,26 +17,76 @@ export interface KokoroVoiceOption {
 export const KOKORO_VOICES: KokoroVoiceOption[] = [
   // American Female
   { id: 'af_heart', name: 'Heart', gender: 'female', accent: 'American', description: 'Warm, natural, expressive tone (Recommended Guide)' },
+  { id: 'af_alloy', name: 'Alloy', gender: 'female', accent: 'American', description: 'Balanced and clear tone' },
+  { id: 'af_aoede', name: 'Aoede', gender: 'female', accent: 'American', description: 'Melodic, expressive narrative tone' },
   { id: 'af_bella', name: 'Bella', gender: 'female', accent: 'American', description: 'Vibrant, engaging narrative pacing' },
+  { id: 'af_jessica', name: 'Jessica', gender: 'female', accent: 'American', description: 'Warm and friendly cadence' },
+  { id: 'af_kore', name: 'Kore', gender: 'female', accent: 'American', description: 'Calm, steady, and meditative' },
   { id: 'af_nicole', name: 'Nicole', gender: 'female', accent: 'American', description: 'Crisp, articulate broadcast tone' },
-  { id: 'af_sky', name: 'Sky', gender: 'female', accent: 'American', description: 'Bright, youthful, and friendly' },
+  { id: 'af_nova', name: 'Nova', gender: 'female', accent: 'American', description: 'Bright and energetic' },
+  { id: 'af_river', name: 'River', gender: 'female', accent: 'American', description: 'Smooth and soothing' },
   { id: 'af_sarah', name: 'Sarah', gender: 'female', accent: 'American', description: 'Calm, measured, and gentle' },
+  { id: 'af_sky', name: 'Sky', gender: 'female', accent: 'American', description: 'Bright, youthful, and friendly' },
 
   // British Female
   { id: 'bf_emma', name: 'Emma', gender: 'female', accent: 'British', description: 'Refined BBC-style journalistic voice' },
   { id: 'bf_isabella', name: 'Isabella', gender: 'female', accent: 'British', description: 'Intellectual, clear cadence' },
+  { id: 'bf_alice', name: 'Alice', gender: 'female', accent: 'British', description: 'Warm British storytelling voice' },
+  { id: 'bf_lily', name: 'Lily', gender: 'female', accent: 'British', description: 'Clear and gentle British accent' },
 
   // American Male
   { id: 'am_adam', name: 'Adam', gender: 'male', accent: 'American', description: 'Conversational broadcaster (Recommended Analyst)' },
-  { id: 'am_michael', name: 'Michael', gender: 'male', accent: 'American', description: 'Authoritative and insightful baritone' },
   { id: 'am_echo', name: 'Echo', gender: 'male', accent: 'American', description: 'Smooth, resonant, and balanced' },
-  { id: 'am_fenrir', name: 'Fenrir', gender: 'male', accent: 'American', description: 'Deep, steady, and grounded' },
   { id: 'am_eric', name: 'Eric', gender: 'male', accent: 'American', description: 'Dynamic and conversational' },
+  { id: 'am_fenrir', name: 'Fenrir', gender: 'male', accent: 'American', description: 'Deep, steady, and grounded' },
+  { id: 'am_liam', name: 'Liam', gender: 'male', accent: 'American', description: 'Clear and professional' },
+  { id: 'am_michael', name: 'Michael', gender: 'male', accent: 'American', description: 'Authoritative and insightful baritone' },
+  { id: 'am_onyx', name: 'Onyx', gender: 'male', accent: 'American', description: 'Deep and resonant' },
+  { id: 'am_puck', name: 'Puck', gender: 'male', accent: 'American', description: 'Energetic and lively' },
+  { id: 'am_santa', name: 'Santa', gender: 'male', accent: 'American', description: 'Warm and booming voice' },
 
   // British Male
   { id: 'bm_george', name: 'George', gender: 'male', accent: 'British', description: 'Thoughtful, analytical cadence' },
   { id: 'bm_lewis', name: 'Lewis', gender: 'male', accent: 'British', description: 'Warm, engaging documentary tone' },
+  { id: 'bm_daniel', name: 'Daniel', gender: 'male', accent: 'British', description: 'Authoritative British narrator' },
+  { id: 'bm_fable', name: 'Fable', gender: 'male', accent: 'British', description: 'Expressive storytelling voice' },
 ];
+
+/**
+ * Validates and maps voice IDs between engine types (e.g. converting Gemini "Aoede" to Kokoro "af_aoede" or fallback).
+ */
+export function getCompatibleVoiceId(engine: string, voiceId?: string, isGuide: boolean = true): string {
+  if (engine === 'local-wasm') {
+    const validKokoro = KOKORO_VOICES.map(v => v.id);
+    if (voiceId && validKokoro.includes(voiceId)) {
+      return voiceId;
+    }
+    if (voiceId) {
+      const lower = voiceId.toLowerCase();
+      if (lower.includes('aoede')) return 'af_aoede';
+      if (lower.includes('kore')) return 'af_kore';
+      if (lower.includes('fenrir')) return 'am_fenrir';
+      if (lower.includes('puck')) return 'am_puck';
+      if (lower.includes('zephyr')) return 'af_sky';
+      if (lower.includes('charon')) return 'am_michael';
+    }
+    return isGuide ? 'af_heart' : 'am_adam';
+  } else if (engine === 'gemini-cloud') {
+    const validGemini = ['Aoede', 'Zephyr', 'Kore', 'Fenrir', 'Charon', 'Puck'];
+    if (voiceId && validGemini.includes(voiceId)) {
+      return voiceId;
+    }
+    if (voiceId) {
+      const lower = voiceId.toLowerCase();
+      if (lower.includes('aoede') || lower.includes('heart')) return 'Aoede';
+      if (lower.includes('kore')) return 'Kore';
+      if (lower.includes('fenrir') || lower.includes('adam')) return 'Fenrir';
+      if (lower.includes('puck')) return 'Puck';
+    }
+    return isGuide ? 'Aoede' : 'Fenrir';
+  }
+  return voiceId || (isGuide ? 'af_heart' : 'am_adam');
+}
 
 export interface KokoroLoadProgress {
   status: 'idle' | 'downloading' | 'loading' | 'ready' | 'error';

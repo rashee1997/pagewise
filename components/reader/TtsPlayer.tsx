@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Volume2, Play, Pause, Square, Loader2, Sparkles } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { AppSettings, TtsEngine } from '@/lib/db/types';
-import { synthesizeKokoroSpeech } from '@/lib/tts/kokoro';
+import { synthesizeKokoroSpeech, getCompatibleVoiceId } from '@/lib/tts/kokoro';
 
 interface TtsPlayerProps {
   textToRead: string;
@@ -48,12 +48,8 @@ export function TtsPlayer({ textToRead, chapterTitle, settings }: TtsPlayerProps
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const engine: TtsEngine = settings?.audioSettings?.engine || 'local-wasm';
-  const VALID_GEMINI_VOICES = ['Aoede', 'Zephyr', 'Kore', 'Fenrir', 'Charon', 'Puck'];
-  const rawGuide = settings?.audioSettings?.guideVoice || 'Aoede';
-  const voiceId =
-    engine === 'gemini-cloud'
-      ? VALID_GEMINI_VOICES.includes(rawGuide) ? rawGuide : 'Aoede'
-      : settings?.audioSettings?.guideVoice || 'af_heart';
+  const rawVoice = settings?.audioSettings?.guideVoice;
+  const voiceId = getCompatibleVoiceId(engine, rawVoice, true);
 
   const stop = useCallback(() => {
     runRef.current += 1;

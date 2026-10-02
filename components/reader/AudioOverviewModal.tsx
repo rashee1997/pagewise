@@ -22,6 +22,7 @@ import {
 import {
   synthesizeKokoroSpeech,
   KokoroLoadProgress,
+  getCompatibleVoiceId,
 } from '@/lib/tts/kokoro';
 
 interface AudioOverviewModalProps {
@@ -166,9 +167,9 @@ export function AudioOverviewModal({
 
       // 1. Local Neural WASM (Kokoro-82M)
       if (engine === 'local-wasm') {
-        const voiceId = isGuide
-          ? settings.audioSettings?.guideVoice || 'af_heart'
-          : settings.audioSettings?.analystVoice || 'am_adam';
+        const rawGuide = settings.audioSettings?.guideVoice || 'af_heart';
+        const rawAnalyst = settings.audioSettings?.analystVoice || 'am_adam';
+        const voiceId = getCompatibleVoiceId('local-wasm', isGuide ? rawGuide : rawAnalyst, isGuide);
 
         try {
           let audioUrl = audioCacheRef.current[cacheKey];
@@ -214,12 +215,9 @@ export function AudioOverviewModal({
 
       // 2. Gemini Cloud Studio TTS (gemini-3.8-flash-tts)
       if (engine === 'gemini-cloud') {
-        const VALID_GEMINI_VOICES = ['Aoede', 'Zephyr', 'Kore', 'Fenrir', 'Charon', 'Puck'];
         const rawGuide = settings.audioSettings?.guideVoice || 'Aoede';
         const rawAnalyst = settings.audioSettings?.analystVoice || 'Fenrir';
-        const guideValid = VALID_GEMINI_VOICES.includes(rawGuide) ? rawGuide : 'Aoede';
-        const analystValid = VALID_GEMINI_VOICES.includes(rawAnalyst) ? rawAnalyst : 'Fenrir';
-        const cloudVoice = isGuide ? guideValid : analystValid;
+        const cloudVoice = getCompatibleVoiceId('gemini-cloud', isGuide ? rawGuide : rawAnalyst, isGuide);
         const cloudModel = settings.audioSettings?.geminiTtsModel || 'gemini-3.8-flash-tts';
 
         try {
