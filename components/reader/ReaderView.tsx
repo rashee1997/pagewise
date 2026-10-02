@@ -3,6 +3,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { Minimize2 } from 'lucide-react';
 import { Book, Chapter, AppSettings, Note } from '@/lib/db/types';
+import { saveCards } from '@/lib/db';
 import { formatChapterParagraphs, normalizeQuote, prefersReducedMotion } from '@/lib/reader/text';
 import { useReadingProgress } from '@/hooks/reader/useReadingProgress';
 import { useTextSelection } from '@/hooks/reader/useTextSelection';
@@ -18,14 +19,9 @@ import { ReaderFooter } from './ReaderFooter';
 import { ReaderArticle } from './ReaderArticle';
 import { ReaderModePanel } from './ReaderModePanel';
 import { PdfPane } from './PdfPane';
-import { SelectionMenu } from './SelectionMenu';
-import { ChapterOutline } from './ChapterOutline';
-import { NotesPanel } from './NotesPanel';
-import { ExplainDialog } from './ExplainDialog';
-import { NoteDialog, NoteDraft } from './NoteDialog';
-import { CardDraftDialog } from './CardDraftDialog';
-import { AudioOverviewModal } from './AudioOverviewModal';
-import { AssistantDrawer } from '../assistant/AssistantDrawer';
+import { ReaderSidePanels } from './ReaderSidePanels';
+import { ReaderDialogs } from './ReaderDialogs';
+import type { NoteDraft } from './NoteDialog';
 import type { CitationItem } from '../assistant/chatTypes';
 import type { Command } from '@/components/navigation/CommandPalette';
 import type { ReaderMode } from './readerModes';
@@ -33,7 +29,7 @@ import type { ReaderActions } from './readerActions';
 
 export type { ReaderMode } from './readerModes';
 
-interface ReaderViewProps {
+export interface ReaderViewProps {
   book: Book;
   chapters: Chapter[];
   initialChapterIndex?: number;
@@ -67,6 +63,7 @@ export function ReaderView({
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [isOutlineOpen, setIsOutlineOpen] = useState(false);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const [isAudioOverviewOpen, setIsAudioOverviewOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState<NoteDraft | null>(null);
   const articleRef = useRef<HTMLDivElement>(null);
@@ -75,7 +72,7 @@ export function ReaderView({
   const paragraphs = useMemo(() => formatChapterParagraphs(activeChapter.text), [activeChapter.text]);
 
   const { isViewing: isViewingOriginalPdf, pdfUrl, pdfState, toggle: toggleOriginalPdf } = useOriginalPdf(book.id);
-  const { notes, chapterNotes, noteCounts, addHighlight, removeNote } = useReaderNotes(book, activeChapter);
+  const { notes, chapterNotes, noteCounts, addHighlight, saveNoteItem, removeNote } = useReaderNotes(book, activeChapter);
   const { chapterProgress, resetForChapter, overallPercent } = useReadingProgress({
     book,
     chapters,
@@ -91,7 +88,7 @@ export function ReaderView({
   const { aiSelection, runSelectionAI, closeAiSelection } = useSelectionAI(book, activeChapter, settings);
   const { cardDraft, setCardDraft, startCardDraft, draftCardQuestion, submitCard } = useCardDraft(book, activeChapter, settings);
 
-  // ---- Navigation ----
+  // Navigation
   const goToChapter = (idx: number) => {
     if (idx < 0 || idx >= chapters.length) return;
     setCurrentChapterIndex(idx);
@@ -100,7 +97,7 @@ export function ReaderView({
     window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   };
 
-  // ---- Grounded Source Citation Jump & Pulse ----
+  // Grounded Source Citation Jump & Pulse
   const handleCitationClick = (citation: CitationItem) => {
     setActiveMode('read');
     setTimeout(() => {
@@ -126,7 +123,7 @@ export function ReaderView({
     }, 120);
   };
 
-  // ---- Selection actions (each consumes the native selection) ----
+  // Selection actions
   const explain = (t: string) => {
     clearSelection();
     runSelectionAI('explain_selection', t);
@@ -154,7 +151,17 @@ export function ReaderView({
     if (!noteDraft) return;
     const draft = noteDraft;
     setNoteDraft(null);
-    await addHighlight(draft.quote, draft.text.trim());
+    await saveNoteItem(draft);
+  };
+
+  const editNote = (note: Note) => {
+    setIsNotesOpen(false);
+    setNoteDraft({ id: note.id, quote: note.quote, text: note.text });
+  };
+
+  const newCustomNote = () => {
+    setIsNotesOpen(false);
+    setIsWorkspaceOpen(true);
   };
 
   const jumpToNote = (note: Note) => {
@@ -168,7 +175,7 @@ export function ReaderView({
     }, 150);
   };
 
-  // ---- Shortcuts & command menu (latest closures via ref) ----
+  // Keyboard shortcuts & command palette registration
   const actions: ReaderActions = {
     next: () => goToChapter(currentChapterIndex + 1),
     prev: () => goToChapter(currentChapterIndex - 1),
@@ -192,7 +199,7 @@ export function ReaderView({
   useReaderShortcuts(actionsRef);
   useReaderCommands(chapters, book.hasPdf, actionsRef, onRegisterCommands);
 
-  // Seeded assistant prompt (from the command menu "Ask the assistant"): open the drawer when a new seed arrives
+  // Seeded assistant prompt: open drawer when a new seed arrives
   const [lastSeed, setLastSeed] = useState(assistantSeed);
   if (assistantSeed !== lastSeed) {
     setLastSeed(assistantSeed);
@@ -206,9 +213,7 @@ export function ReaderView({
   return (
     <div
       style={{ backgroundColor: 'var(--reader-bg)', color: 'var(--reader-fg)' }}
-      className={`min-h-dvh flex flex-col justify-between transition-[padding] duration-200 ${themeClass} ${
-        isAssistantOpen ? 'lg:pr-[26rem]' : ''
-      }`}
+      className={`min-h-dvh flex flex-col justify-between ${themeClass}`}
     >
       <a
         href="#reader-panel"
@@ -247,85 +252,71 @@ export function ReaderView({
 
       {isFocusMode && (
         <button
+          type="button"
           onClick={() => setIsFocusMode(false)}
-          className="fixed top-4 right-4 z-40 [--focus:#fbbf24] bg-stone-900/90 hover:bg-stone-900 text-stone-100 rounded-full shadow-lg backdrop-blur-xs inline-flex items-center gap-1.5 text-xs px-4 min-h-10"
+          className="fixed top-4 right-4 z-40 [--focus:#fbbf24] bg-stone-900/90 hover:bg-stone-900 text-stone-100 rounded-full shadow-lg backdrop-blur-xs inline-flex items-center gap-1.5 text-xs px-4 min-h-10 cursor-pointer focus-visible:ring-2 focus-visible:ring-amber-500"
         >
           <Minimize2 className="w-3.5 h-3.5" aria-hidden="true" />
           <span>Exit focus mode (Esc)</span>
         </button>
       )}
 
-      <main
-        id="reader-panel"
-        role="tabpanel"
-        tabIndex={-1}
-        aria-labelledby={`tab-${activeMode}`}
-        className="flex-1 py-8 md:py-14 px-4 sm:px-6"
-      >
-        {isViewingOriginalPdf ? (
-          <PdfPane url={pdfUrl} state={pdfState} title={`Original PDF for ${book.title}`} />
-        ) : activeMode === 'read' ? (
-          <ReaderArticle
-            ref={articleRef}
-            chapter={activeChapter}
-            chapterIndex={currentChapterIndex}
-            chapterCount={chapters.length}
-            paragraphs={paragraphs}
-            notes={chapterNotes}
-            settings={settings}
-            onPrev={() => goToChapter(currentChapterIndex - 1)}
-            onNext={() => goToChapter(currentChapterIndex + 1)}
-          />
-        ) : (
-          <ReaderModePanel mode={activeMode} book={book} chapter={activeChapter} settings={settings} />
-        )}
-      </main>
+      <div className="flex-1 flex flex-col lg:flex-row items-stretch min-w-0">
+        <main
+          id="reader-panel"
+          role="tabpanel"
+          tabIndex={-1}
+          aria-labelledby={`tab-${activeMode}`}
+          className="flex-1 py-8 md:py-14 px-4 sm:px-6 min-w-0"
+        >
+          {isViewingOriginalPdf ? (
+            <PdfPane url={pdfUrl} state={pdfState} title={`Original PDF for ${book.title}`} />
+          ) : activeMode === 'read' ? (
+            <ReaderArticle
+              ref={articleRef}
+              chapter={activeChapter}
+              chapterIndex={currentChapterIndex}
+              chapterCount={chapters.length}
+              paragraphs={paragraphs}
+              notes={chapterNotes}
+              settings={settings}
+              onPrev={() => goToChapter(currentChapterIndex - 1)}
+              onNext={() => goToChapter(currentChapterIndex + 1)}
+            />
+          ) : (
+            <ReaderModePanel mode={activeMode} book={book} chapter={activeChapter} settings={settings} />
+          )}
+        </main>
 
-      <SelectionMenu
-        position={selectionPosition}
-        selectedText={selectedText}
-        onExplain={explain}
-        onSimplify={simplify}
-        onHighlight={highlight}
-        onMakeCard={startCard}
-        onAddNote={startNote}
-      />
-
-      <ExplainDialog
-        state={aiSelection}
-        onClose={closeAiSelection}
-        onRetry={runSelectionAI}
-        onSaveAsNote={(quote, content) => {
-          addHighlight(quote, content);
-          closeAiSelection();
-        }}
-      />
-      <NoteDialog draft={noteDraft} onChange={setNoteDraft} onCancel={() => setNoteDraft(null)} onSubmit={submitNote} />
-      <CardDraftDialog
-        draft={cardDraft}
-        onChange={setCardDraft}
-        onCancel={() => setCardDraft(null)}
-        onSubmit={submitCard}
-        onDraftQuestion={draftCardQuestion}
-      />
-
-      <ChapterOutline
-        isOpen={isOutlineOpen}
-        onClose={() => setIsOutlineOpen(false)}
-        chapters={chapters}
-        currentIndex={currentChapterIndex}
-        progress={chapterProgress}
-        noteCounts={noteCounts}
-        onSelect={goToChapter}
-      />
-      <NotesPanel
-        isOpen={isNotesOpen}
-        onClose={() => setIsNotesOpen(false)}
-        chapterTitle={activeChapter.title}
-        notes={chapterNotes}
-        onDelete={n => removeNote(n)}
-        onJump={jumpToNote}
-      />
+        <ReaderSidePanels
+          isOutlineOpen={isOutlineOpen}
+          onCloseOutline={() => setIsOutlineOpen(false)}
+          chapters={chapters}
+          currentChapterIndex={currentChapterIndex}
+          chapterProgress={chapterProgress}
+          noteCounts={noteCounts}
+          onSelectChapter={goToChapter}
+          isNotesOpen={isNotesOpen}
+          onCloseNotes={() => setIsNotesOpen(false)}
+          activeChapter={activeChapter}
+          chapterNotes={chapterNotes}
+          onDeleteNote={n => removeNote(n)}
+          onJumpToNote={jumpToNote}
+          onEditNote={editNote}
+          onNewCustomNote={newCustomNote}
+          onOpenWorkspace={() => setIsWorkspaceOpen(true)}
+          isAssistantOpen={isAssistantOpen}
+          onCloseAssistant={() => setIsAssistantOpen(false)}
+          book={book}
+          selectedText={selectedText}
+          onClearSelection={clearSelection}
+          settings={settings}
+          dueCardsCount={dueCardsCount}
+          assistantSeed={assistantSeed}
+          onAssistantSeedConsumed={onAssistantSeedConsumed}
+          onCitationClick={handleCitationClick}
+        />
+      </div>
 
       {!isFocusMode && (
         <ReaderFooter
@@ -338,26 +329,44 @@ export function ReaderView({
         />
       )}
 
-      <AssistantDrawer
-        isOpen={isAssistantOpen}
-        onClose={() => setIsAssistantOpen(false)}
-        book={book}
-        chapter={activeChapter}
+      <ReaderDialogs
+        selectionPosition={selectionPosition}
         selectedText={selectedText}
-        onClearSelection={() => setSelectedText('')}
-        settings={settings}
-        dueCardsCount={dueCardsCount}
-        seedPrompt={assistantSeed}
-        onSeedConsumed={onAssistantSeedConsumed}
-        onCitationClick={handleCitationClick}
-      />
-
-      <AudioOverviewModal
-        isOpen={isAudioOverviewOpen}
-        onClose={() => setIsAudioOverviewOpen(false)}
+        onExplain={explain}
+        onSimplify={simplify}
+        onHighlight={highlight}
+        onMakeCard={startCard}
+        onAddNote={startNote}
+        aiSelection={aiSelection}
+        onCloseAiSelection={closeAiSelection}
+        onRetryAiSelection={(kind, text) => runSelectionAI(kind, text)}
+        onSaveAiAsNote={(q, c) => saveNoteItem({ quote: q, text: c })}
+        noteDraft={noteDraft}
+        onChangeNoteDraft={setNoteDraft}
+        onCancelNoteDraft={() => setNoteDraft(null)}
+        onSubmitNoteDraft={submitNote}
         book={book}
-        chapter={activeChapter}
+        activeChapter={activeChapter}
         settings={settings}
+        onFlashcardCreatedFromNote={async card => {
+          await saveCards([card]);
+        }}
+        cardDraft={cardDraft}
+        onChangeCardDraft={setCardDraft}
+        onCancelCardDraft={() => setCardDraft(null)}
+        onSubmitCardDraft={submitCard}
+        onDraftCardQuestion={draftCardQuestion}
+        isWorkspaceOpen={isWorkspaceOpen}
+        onCloseWorkspace={() => setIsWorkspaceOpen(false)}
+        chapters={chapters}
+        notes={notes}
+        onSaveNoteItem={saveNoteItem}
+        onDeleteNoteItem={n => removeNote(n)}
+        onFlashcardCreatedFromWorkspace={async card => {
+          await saveCards([card]);
+        }}
+        isAudioOverviewOpen={isAudioOverviewOpen}
+        onCloseAudioOverview={() => setIsAudioOverviewOpen(false)}
       />
     </div>
   );

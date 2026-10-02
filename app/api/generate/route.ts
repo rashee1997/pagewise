@@ -240,6 +240,9 @@ When the user asks for a flashcard, include Q: [question] and A: [answer].`;
       responseMimeType = 'application/json';
       systemInstruction += ` Provide an uplifting, thoughtful reading quote from literature, philosophy, or history, accompanied by a 1-sentence reflection on the power of daily reading and lifelong learning. Output strictly JSON with keys: "text" (the quote), "author" (name of speaker/writer), "reflection" (1 sentence).`;
       prompt = `Give a daily motivation for an avid reader today.`;
+    } else if (kind === 'note_ai') {
+      systemInstruction += ` You are Pagewise AI writing and note assistant. You help the user summarize, expand, polish, format, or extract flashcards from their reading notes in clean Markdown format.`;
+      prompt = `Book: "${bookTitle || 'Book'}" (${chapterTitle || ''})\n\nNote Content / Context:\n${selectedText || chapterText || ''}\n\nTask Instructions: ${userPrompt}`;
     }
 
     // Call Model: Either Custom OpenAI-compatible or Default Gemini

@@ -33,6 +33,12 @@ export function formatChapterParagraphs(rawText: string): string[] {
 
 export const normalizeQuote = (t: string) => t.replace(/\s+/g, ' ').trim();
 
+export function formatMarkdown(text: string): string {
+  if (!text) return '';
+  let cleaned = text.replace(/([^\n])\s*(#{1,6}\s+[^\n]+)/g, '$1\n\n$2');
+  return cleaned;
+}
+
 export function isTypingTarget(el: EventTarget | null) {
   const node = el as HTMLElement | null;
   if (!node || !node.tagName) return false;

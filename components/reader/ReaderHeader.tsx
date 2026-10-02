@@ -99,21 +99,6 @@ export function ReaderHeader(p: ReaderHeaderProps) {
           </button>
           <div className="min-w-0 flex-1">
             <h1 className="text-xs md:text-sm font-bold truncate">{p.book.title}</h1>
-            <label className="sr-only" htmlFor="chapter-select">
-              Chapter
-            </label>
-            <select
-              id="chapter-select"
-              value={p.currentChapterIndex}
-              onChange={e => p.onGoToChapter(Number(e.target.value))}
-              className="bg-transparent text-xs text-stone-600 dark:text-stone-400 border-none p-0 cursor-pointer font-medium truncate min-h-6 w-full max-w-full rounded-xs"
-            >
-              {p.chapters.map((ch, idx) => (
-                <option key={ch.id} value={idx} className="bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100">
-                  {ch.title}
-                </option>
-              ))}
-            </select>
           </div>
         </div>
 

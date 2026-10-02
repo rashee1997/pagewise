@@ -143,7 +143,7 @@ export function TodayView({
                 <div className="min-w-0 space-y-0.5">
                   <div className="flex items-center gap-2">
                     {step.badge && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 shrink-0">
+                      <span className="text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 shrink-0">
                         {step.badge}
                       </span>
                     )}

@@ -13,9 +13,10 @@ interface ChapterOutlineProps {
   progress: Record<string, number>;
   noteCounts: Record<string, number>;
   onSelect: (index: number) => void;
+  inline?: boolean;
 }
 
-/** Right-hand sheet (bottom-aligned full width on phones) listing chapters with read progress. */
+/** Right-hand sheet or inline desktop side panel listing chapters with read progress. */
 export function ChapterOutline({
   isOpen,
   onClose,
@@ -24,16 +25,10 @@ export function ChapterOutline({
   progress,
   noteCounts,
   onSelect,
+  inline = false,
 }: ChapterOutlineProps) {
-  return (
-    <Dialog
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Chapters"
-      hideTitle
-      placement="right"
-      panelClassName="w-full sm:w-96 h-full bg-white dark:bg-stone-900 border-l border-stone-200 dark:border-stone-800 shadow-2xl flex flex-col animate-in slide-in-from-right duration-200 text-stone-900 dark:text-stone-100"
-    >
+  const content = (
+    <>
       <div className="flex items-center justify-between p-4 border-b border-stone-200 dark:border-stone-800 shrink-0">
         <h3 className="text-sm font-bold">Chapters</h3>
         <button
@@ -87,6 +82,28 @@ export function ChapterOutline({
           })}
         </ol>
       </nav>
+    </>
+  );
+
+  if (inline) {
+    if (!isOpen) return null;
+    return (
+      <aside aria-label="Chapters side panel" className="w-full lg:w-96 shrink-0 border-l border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 flex flex-col h-[calc(100vh-4rem)] sticky top-16 shadow-sm">
+        {content}
+      </aside>
+    );
+  }
+
+  return (
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Chapters"
+      hideTitle
+      placement="right"
+      panelClassName="w-full sm:w-96 h-full bg-white dark:bg-stone-900 border-l border-stone-200 dark:border-stone-800 shadow-2xl flex flex-col animate-in slide-in-from-right duration-200 text-stone-900 dark:text-stone-100"
+    >
+      {content}
     </Dialog>
   );
 }

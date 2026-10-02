@@ -75,5 +75,46 @@ export function useReaderNotes(book: Book, chapter: Chapter) {
     }
   };
 
-  return { notes, chapterNotes, noteCounts, addHighlight, removeNote };
+  /** Save or update a note, highlight, or custom note. */
+  const saveNoteItem = async (draft: { id?: string; chapterId?: string; quote?: string; text: string }) => {
+    const targetChapterId = draft.chapterId || chapter.id;
+    const quote = draft.quote ? normalizeQuote(draft.quote) : undefined;
+    if (draft.id) {
+      const existing = notes.find(n => n.id === draft.id);
+      if (!existing) return;
+      const updated: Note = { ...existing, chapterId: targetChapterId, quote, text: draft.text };
+      setNotes(prev => prev.map(n => (n.id === draft.id ? updated : n)));
+      try {
+        await saveNote(updated);
+        toast({ message: 'Note updated' });
+      } catch {
+        toast({ message: 'Could not update note', tone: 'error' });
+      }
+    } else {
+      if (!quote && !draft.text.trim()) return;
+      const note: Note = {
+        id: `note_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        bookId: book.id,
+        chapterId: targetChapterId,
+        page: chapter.startPage,
+        quote,
+        text: draft.text,
+        createdAt: Date.now(),
+      };
+      setNotes(prev => [note, ...prev]); // optimistic
+      try {
+        await saveNote(note);
+        toast({
+          message: draft.text ? 'Note saved' : 'Highlight saved',
+          actionLabel: 'Undo',
+          onAction: () => removeNote(note, true),
+        });
+      } catch {
+        setNotes(prev => prev.filter(n => n.id !== note.id));
+        toast({ message: 'Could not save — browser storage may be full.', tone: 'error' });
+      }
+    }
+  };
+
+  return { notes, chapterNotes, noteCounts, addHighlight, saveNoteItem, removeNote };
 }
