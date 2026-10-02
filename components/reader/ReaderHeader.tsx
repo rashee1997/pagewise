@@ -159,7 +159,11 @@ export function ReaderHeader(p: ReaderHeaderProps) {
             >
               <Headphones className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             </button>
-            <TtsPlayer textToRead={p.activeChapter.text} chapterTitle={p.activeChapter.title} />
+            <TtsPlayer
+              textToRead={p.activeChapter.text}
+              chapterTitle={p.activeChapter.title}
+              settings={p.settings}
+            />
             <button
               onClick={p.onTogglePreferences}
               aria-label="Reading appearance"
@@ -205,7 +209,11 @@ export function ReaderHeader(p: ReaderHeaderProps) {
 
       {showMobileTts && (
         <div className="md:hidden px-4 py-2 border-t border-stone-200 dark:border-stone-800 flex justify-center">
-          <TtsPlayer textToRead={p.activeChapter.text} chapterTitle={p.activeChapter.title} />
+          <TtsPlayer
+            textToRead={p.activeChapter.text}
+            chapterTitle={p.activeChapter.title}
+            settings={p.settings}
+          />
         </div>
       )}
 

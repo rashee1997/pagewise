@@ -5,6 +5,7 @@ import { AppSettings } from '@/lib/db/types';
 import { useAiProviderSettings } from '@/hooks/settings/useAiProviderSettings';
 import { AiProviderSection } from './AiProviderSection';
 import { GoalSection } from './GoalSection';
+import { AudioSettingsSection } from './AudioSettingsSection';
 import { AppearanceSection } from './AppearanceSection';
 import { DataSection } from './DataSection';
 
@@ -28,6 +29,7 @@ export function SettingsView({ settings, onUpdateSettings, onResetApp }: Setting
 
       <AiProviderSection ai={ai} />
       <GoalSection settings={settings} onUpdateSettings={onUpdateSettings} />
+      <AudioSettingsSection settings={settings} onUpdateSettings={onUpdateSettings} />
       <AppearanceSection settings={settings} onUpdateSettings={onUpdateSettings} />
       <DataSection onResetApp={onResetApp} />
     </div>

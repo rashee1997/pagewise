@@ -67,6 +67,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
   readerFontFamily: 'serif',
   readerLineWidth: 'normal',
   ttsRate: 1.0,
+  audioSettings: {
+    engine: 'local-wasm',
+    guideVoice: 'af_heart',
+    analystVoice: 'am_adam',
+    playbackRate: 1.0,
+    geminiTtsModel: 'gemini-3.8-flash-tts',
+  },
   targetRetention: 0.90,
   streakDays: 1,
   lastActiveDate: new Date().toISOString().split('T')[0],
@@ -77,7 +84,17 @@ export const DEFAULT_SETTINGS: AppSettings = {
 export async function getAppSettings(): Promise<AppSettings> {
   try {
     const stored = await db.settings.get('current_settings');
-    if (stored) return stored;
+    if (stored) {
+      let needsSave = false;
+      if (!stored.audioSettings) {
+        stored.audioSettings = DEFAULT_SETTINGS.audioSettings;
+        needsSave = true;
+      }
+      if (needsSave) {
+        await db.settings.put(stored);
+      }
+      return stored;
+    }
     await db.settings.put(DEFAULT_SETTINGS);
     return DEFAULT_SETTINGS;
   } catch (e) {

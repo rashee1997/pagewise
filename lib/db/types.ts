@@ -193,6 +193,18 @@ export interface ProviderConfig {
   label?: string;
 }
 
+export type TtsEngine = 'local-wasm' | 'gemini-cloud' | 'system';
+
+export interface AudioSettings {
+  engine: TtsEngine;
+  guideVoice: string;
+  analystVoice: string;
+  playbackRate: number;
+  geminiTtsModel?: 'gemini-3.8-flash-tts' | 'gemini-3.8-flash-lite-tts';
+  customKokoroModelId?: string;
+  customVoiceId?: string;
+}
+
 export interface AppSettings {
   id: string;
   provider: ProviderConfig;
@@ -205,6 +217,7 @@ export interface AppSettings {
   readerLineWidth: 'narrow' | 'normal' | 'wide';
   ttsVoiceName?: string;
   ttsRate: number;
+  audioSettings?: AudioSettings;
   targetRetention?: number; // Desired retention rate (0.80 - 0.95, default 0.90)
   streakDays: number;
   lastActiveDate: string; // YYYY-MM-DD

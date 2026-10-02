@@ -165,6 +165,48 @@ export function ReaderPreferences({
           </button>
         </div>
       </div>
+
+      {/* Voice & Audio Engine */}
+      <div className="space-y-1.5 pt-2 border-t border-stone-100 dark:border-stone-800">
+        <div className="flex items-center justify-between">
+          <p className="text-stone-600 dark:text-stone-400 font-medium">Read Aloud Engine</p>
+          <span className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold">
+            {settings.audioSettings?.engine === 'local-wasm' ? 'Local Neural (WASM)' : settings.audioSettings?.engine === 'gemini-cloud' ? 'Gemini Studio' : 'System'}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-1 p-1 bg-stone-100 dark:bg-stone-800 rounded-xl text-[11px]">
+          <button
+            onClick={() => onUpdateSettings({ audioSettings: { ...(settings.audioSettings || { guideVoice: 'af_heart', analystVoice: 'am_adam', playbackRate: 1.0 }), engine: 'local-wasm' } })}
+            className={`py-1 px-1.5 rounded-lg text-center font-medium transition-all cursor-pointer ${
+              (settings.audioSettings?.engine || 'local-wasm') === 'local-wasm'
+                ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-2xs font-semibold'
+                : 'text-stone-600 dark:text-stone-400 hover:text-stone-900'
+            }`}
+          >
+            Local WASM
+          </button>
+          <button
+            onClick={() => onUpdateSettings({ audioSettings: { ...(settings.audioSettings || { guideVoice: 'af_heart', analystVoice: 'am_adam', playbackRate: 1.0 }), engine: 'gemini-cloud' } })}
+            className={`py-1 px-1.5 rounded-lg text-center font-medium transition-all cursor-pointer ${
+              settings.audioSettings?.engine === 'gemini-cloud'
+                ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-2xs font-semibold'
+                : 'text-stone-600 dark:text-stone-400 hover:text-stone-900'
+            }`}
+          >
+            Gemini TTS
+          </button>
+          <button
+            onClick={() => onUpdateSettings({ audioSettings: { ...(settings.audioSettings || { guideVoice: 'af_heart', analystVoice: 'am_adam', playbackRate: 1.0 }), engine: 'system' } })}
+            className={`py-1 px-1.5 rounded-lg text-center font-medium transition-all cursor-pointer ${
+              settings.audioSettings?.engine === 'system'
+                ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-2xs font-semibold'
+                : 'text-stone-600 dark:text-stone-400 hover:text-stone-900'
+            }`}
+          >
+            System
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
